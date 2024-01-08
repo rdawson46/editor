@@ -22,13 +22,19 @@ use ratatui::prelude::{
 
 async fn run() -> Result<()> {
     // TODO: fix new function
+    let filename = std::env::args().nth(1);
+    if filename.is_none() {
+        return Ok(());
+    }
+
+    let filename = filename.unwrap();
+    let filename = std::path::Path::new(&filename);
+
     let mut tui = Tui::new()?.tick_rate(1.0).frame_rate(30.0);
     tui.enter()?; 
 
     tui.start();
 
-    let filename = std::env::args().nth(0).unwrap();
-    let filename = std::path::Path::new(&filename);
 
     let mut editor = Editor::new(filename)?;
 
