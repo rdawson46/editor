@@ -1,4 +1,6 @@
 use crate::Event;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use ratatui::{
     backend::Backend,
     layout::{Constraint, Direction, Layout, Rect},
@@ -11,7 +13,9 @@ use ratatui::{
 use crate::app::Editor;
 
 // NOTE:: not sure where I'm going with this
-pub fn ui(f: &mut Frame<'_>, editor: &Editor){
+// maybe just wrap a border around the terminal
+// then insert each line of text from the editor
+pub fn ui(f: &mut Frame<'_>, _editor: &Editor){
     
 }
 
@@ -27,7 +31,20 @@ pub fn update(editor: &mut Editor, event: Event){
         Event::FocusGained => {},
         Event::FocusLost => {},
         Event::Paste(_) => {},
-        Event::Key(_) => {},
+        Event::Key(key) => {
+            // FIX: fix this to allow for more flexability
+            match key.code {
+                KeyCode::Char(value) => {
+                    // FIX: change to ctrl + q
+                    if value == 'Q'{
+                        editor.should_quit = true;
+                    } else {
+                        println!("{}", value);
+                    }
+                },
+                _ => {}
+            }
+        },
         Event::Mouse(_) => {},
         Event::Resize(_, _) => {},
     }

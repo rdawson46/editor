@@ -6,22 +6,9 @@ use crate::tui::{Tui, Event};
 use crate::ui::{ui, update};
 
 use color_eyre::eyre::Result;
-use crossterm::event::{
-    EnableMouseCapture,
-    DisableMouseCapture,
-    KeyCode,
-    self,
-    KeyEventKind
-};
-use ratatui::Terminal;
-use ratatui::prelude::{
-    CrosstermBackend,
-    Backend
-};
 
 
 async fn run() -> Result<()> {
-    // TODO: fix new function
     let filename = std::env::args().nth(1);
     if filename.is_none() {
         return Ok(());

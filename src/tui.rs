@@ -1,13 +1,26 @@
 use std::io;
-
+use crossterm::event::{
+    EnableMouseCapture,
+    DisableMouseCapture,
+    KeyCode,
+    self,
+    KeyEventKind,
+    KeyEvent,
+    MouseEvent
+};
 use color_eyre::eyre::Result;
 use ratatui::Terminal;
 use crossterm::execute;
-use crossterm::event::{KeyEvent, MouseEvent};
-use futures::{FutureExt, StreamExt};
+use futures::{
+    FutureExt,
+    StreamExt
+};
 use ratatui::backend::CrosstermBackend;
 use tokio::sync::mpsc::unbounded_channel;
-use tokio::{sync::mpsc, task::JoinHandle};
+use tokio::{
+    sync::mpsc,
+    task::JoinHandle
+};
 use crossterm::terminal::{
     enable_raw_mode,
     EnterAlternateScreen,
@@ -46,7 +59,7 @@ impl Tui {
     // NOTE: creates new Tui
     pub fn new() -> Result<Tui> {
         let backend = CrosstermBackend::new(io::stderr());
-        let mut terminal = Terminal::new(backend)?;
+        let terminal = Terminal::new(backend)?;
 
         let (tx, rx) = unbounded_channel::<Event>();
 
