@@ -21,8 +21,11 @@ use ratatui::prelude::{
 
 
 async fn run() -> Result<()> {
+    // TODO: fix new function
     let mut tui = Tui::new()?.tick_rate(1.0).frame_rate(30.0);
     tui.enter()?; 
+
+    tui.start();
 
     let filename = std::env::args().nth(0).unwrap();
     let filename = std::path::Path::new(&filename);
@@ -33,11 +36,13 @@ async fn run() -> Result<()> {
         let event = tui.next().await?;
 
         if let Event::Render = event.clone() {
-            tui.draw(|f| {
+            tui.terminal.draw(|f| {
+                // sets up ui, who knows where it will go
                 ui(f, &editor);
             })?;
         }
 
+        // use event to update the editor
         update(&mut editor, event);
 
         if editor.should_quit {

@@ -3,7 +3,7 @@ use std::path::{PathBuf, Path};
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 
-enum Mode{
+pub enum Mode{
     Insert
 }
 
@@ -19,7 +19,8 @@ impl Cursor{
 }
 
 pub struct Line{
-    pub text: String
+    pub text: String,
+    pub length: u16
 }
 
 pub struct Lines{
@@ -48,7 +49,10 @@ impl Editor{
 
             for line in reader.lines() {
                 match line {
-                    Ok(text) => {lines.push(Line { text });}
+                    Ok(text) => {
+                        let length: u16 = text.len().try_into().unwrap();
+                        lines.push(Line { text, length });
+                    }
                     Err(_) => {}
                 }
             }
