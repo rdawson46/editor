@@ -28,10 +28,12 @@ async fn run() -> Result<()> {
     loop {
         let event = tui.next().await?;
 
+        let _ = tui.terminal.show_cursor()?;
+
         if let Event::Render = event.clone() {
             tui.terminal.draw(|f| {
                 // sets up ui, who knows where it will go
-                ui(f, &editor);
+                ui(f, &mut editor);
             })?;
         }
 

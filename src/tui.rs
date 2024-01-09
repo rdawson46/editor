@@ -1,4 +1,5 @@
 use std::io;
+#[warn(unused_imports)]
 use crossterm::event::{
     EnableMouseCapture,
     DisableMouseCapture,
@@ -29,6 +30,7 @@ use crossterm::terminal::{
 };
 
 // combining the terminal and event
+#[warn(dead_code)]
 #[derive(Clone, Debug)]
 pub enum Event{
     Init,
