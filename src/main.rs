@@ -1,7 +1,8 @@
-mod app;
+mod editor;
 mod ui;
 mod tui;
-use crate::app::Editor;
+mod word;
+use crate::editor::Editor;
 use crate::tui::{Tui, Event};
 use crate::ui::{ui, update};
 
