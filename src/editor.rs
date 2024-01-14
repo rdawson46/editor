@@ -9,13 +9,35 @@ pub enum Mode{
 }
 
 pub struct Cursor{
-    pub current: (u32, u32),
-    pub possible: (u32, u32)
+    pub current: (u16, u16),
+    pub possible: (u16, u16)
 }
 
+// TODO: fix movements to be safeer
+    // implement stuff for possible
 impl Cursor{
     fn new() -> Cursor{
         Cursor { current: (0,0), possible: (0,0) }
+    }
+
+    pub fn move_down(&mut self) {
+        //self.current.0 += 1;
+        self.current.1 = self.current.1.checked_add(1).unwrap_or(self.current.1);
+    }
+
+    pub fn move_up(&mut self) {
+        //self.current.1 -= 1;
+        self.current.1 = self.current.1.checked_sub(1).unwrap_or(self.current.1);
+    }
+
+    pub fn move_right(&mut self) {
+        //self.current.0 += 1;
+        self.current.0 = self.current.0.checked_add(1).unwrap_or(self.current.0);
+    }
+
+    pub fn move_left(&mut self) {
+        //self.current.1 -= 1;
+        self.current.0 = self.current.0.checked_sub(1).unwrap_or(self.current.0);
     }
 }
 

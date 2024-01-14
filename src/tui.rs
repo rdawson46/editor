@@ -37,9 +37,9 @@ pub enum Event{
     Init,
     Quit,
     Error,
+    Render,
     Closed,
     Tick,
-    Render,
     FocusGained,
     FocusLost,
     Paste(String),
@@ -55,7 +55,7 @@ pub struct Tui {
     pub task: Option<JoinHandle<()>>,
     pub event_rx: mpsc::UnboundedReceiver<Event>,
     pub event_tx: mpsc::UnboundedSender<Event>,
-    pub frame_rate: f64,
+    pub update: bool,
     pub tick_rate: f64,
 }
 
@@ -68,24 +68,26 @@ impl Tui {
         let size = crossterm::terminal::size()?;
         let (tx, rx) = unbounded_channel::<Event>();
 
-        let frame_rate: f64 = 0.0;
         let tick_rate: f64 = 0.0;
 
         let task: Option<JoinHandle<()>> = None;
 
-        Ok(Tui { terminal, size, task, event_rx: rx, event_tx: tx, frame_rate, tick_rate })
+        Ok(Tui { terminal, size, task, event_rx: rx, event_tx: tx, update: true, tick_rate })
     }
+
+    
+    // TODO: remove render rate and used a bool if change detected
 
     // NOTE: kicks off tui usage
     pub fn start(&mut self) {
         let tick_rate = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
-        let redner_delay = std::time::Duration::from_secs_f64(1.0 / self.frame_rate);
+        let render_rate = std::time::Duration::from_secs_f64(1.0 / 30.0);
         let _event_tx = self.event_tx.clone();
 
         let task = tokio::spawn(async move {
             let mut reader = crossterm::event::EventStream::new();
             let mut tick_interval = tokio::time::interval(tick_rate);
-            let mut render_interval = tokio::time::interval(redner_delay);
+            let mut render_interval = tokio::time::interval(render_rate);
             
             loop{
                 let tick_delay = tick_interval.tick();
@@ -124,7 +126,16 @@ impl Tui {
     }
 
     pub async fn next(&mut self) -> Result<Event> {
-        self.event_rx.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get event"))
+        let event = self.event_rx.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get event"));
+        match &event {
+            Ok(ev) => {
+                if let Event::Key(_) = ev {
+                    self.update = true;
+                }
+            },
+            Err(_) => {}
+        }
+        event
     }
 
     pub fn enter(&self) -> Result<()> {
@@ -137,11 +148,6 @@ impl Tui {
         execute!(std::io::stderr(), LeaveAlternateScreen)?;
         disable_raw_mode()?;
         Ok(())
-    }
-
-    pub fn frame_rate(mut self, val: f64) -> Self{
-        self.frame_rate = val;
-        self
     }
 
     pub fn tick_rate(mut self, val: f64) -> Self{

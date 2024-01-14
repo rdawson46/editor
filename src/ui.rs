@@ -1,14 +1,10 @@
-use std::io::Write;
-
 use crate::Event;
 use crate::Tui;
+use crate::X_OFFSET;
 use crossterm::{event::KeyCode};
-use color_eyre::eyre::Result;
 
 // NOTE: might be important
 // use crossterm::event::KeyEvent;
-use crossterm::style::Print;
-use crossterm::cursor;
 use crate::editor::{Editor, Mode};
 
 #[warn(unused_imports)]
@@ -16,24 +12,23 @@ use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     text::{Line, Span, Text},
-    widgets::{Block, Borders, Clear, List, ListItem, Paragraph, Wrap},
-    Frame
+    widgets::{Block, Borders, Clear, Padding, List, ListItem, Paragraph, Wrap},
+    Frame,
 };
 
 // TODO: create layouts for each section
+
 
 pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     // NOTE: IDEA
         // have 3 sections -> Text, Line nums, Command/Status
         // create a thread for each section to be rendered, semaphores
-        // send to rx
-        // when all recv, render all
 
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
                      Constraint::Min(1),
-                     Constraint::Length(1)
+                     Constraint::Length(2)
         ])
         .split(f.size());
 
@@ -68,13 +63,19 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
     // NOTE: borders are temp
 
-    f.render_widget(Paragraph::new("Normal"),
+    f.render_widget(Paragraph::new("Normal")
+                    .block(Block::default()
+                           .borders(Borders::TOP)),
                     wrapper_layout[1]);
 
-    f.render_widget(Paragraph::new(line_nums),
+    f.render_widget(Paragraph::new(line_nums)
+                    .alignment(ratatui::layout::Alignment::Right)
+                    .style(Style::default().fg(Color::DarkGray)),
                     num_text_layout[0]);
     
-    f.render_widget(Paragraph::new(text_string),
+    f.render_widget(Paragraph::new(text_string)
+                    .block(Block::default()
+                       .padding(Padding::new(1, 0, 0, 0))),
                     num_text_layout[1]);
 }
 
@@ -100,10 +101,13 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                     match key.code {
                         KeyCode::Char(value) => {
                             // FIX: change to ctrl + q
-                            if value == 'Q'{
-                                editor.should_quit = true;
-                            } else {
-                                println!("{}", value);
+                            match value {
+                                'Q' => editor.should_quit = true,
+                                'j' => editor.cursor.move_down(),
+                                'k' => editor.cursor.move_up(),
+                                'h' => editor.cursor.move_left(),
+                                'l' => editor.cursor.move_right(),
+                                _ => {}
                             }
                         },
                         _ => {}
@@ -117,4 +121,23 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
             tui.size = (x, y);
         },
     }
+}
+
+#[test]
+fn test_cursor(){
+    let filename = "./Cargo.toml";
+    let filename = std::path::Path::new(&filename);
+
+    let mut editor = Editor::new(filename).unwrap();
+    assert_eq!(editor.cursor.current.1, 0);
+    
+    editor.cursor.move_down();
+
+    assert_eq!(editor.cursor.current.1, 1);
+    
+    editor.cursor.move_up();
+    assert_eq!(editor.cursor.current.1, 0);
+
+    editor.cursor.move_up();
+    assert_eq!(editor.cursor.current.1, 0);
 }

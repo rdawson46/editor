@@ -8,6 +8,10 @@ use crate::ui::{ui, update};
 
 use color_eyre::eyre::Result;
 
+
+static X_OFFSET: u16 = 5;
+
+
 async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
     if filename.is_none() {
@@ -18,8 +22,7 @@ async fn run() -> Result<()> {
     let filename = filename.unwrap();
     let filename = std::path::Path::new(&filename);
 
-    //let mut tui = Tui::new()?.tick_rate(1.0).frame_rate(30.0);
-    let mut tui = Tui::new()?.tick_rate(1.0).frame_rate(0.5);
+    let mut tui = Tui::new()?.tick_rate(1.0);
     let mut editor = Editor::new(filename)?;
 
     tui.enter()?; 
@@ -33,8 +36,10 @@ async fn run() -> Result<()> {
         let event = tui.next().await?;
         
         tui.terminal.show_cursor()?;
+        tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
 
-        if let Event::Render = event.clone() {
+        if tui.update {
+            tui.update = false;
             tui.terminal.draw(|f| {
                 ui(f, &mut editor);
             })?;
