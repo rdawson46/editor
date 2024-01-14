@@ -1,4 +1,5 @@
 use std::io;
+
 #[warn(unused_imports)]
 use crossterm::event::{
     EnableMouseCapture,
@@ -26,7 +27,7 @@ use crossterm::terminal::{
     enable_raw_mode,
     EnterAlternateScreen,
     disable_raw_mode,
-    LeaveAlternateScreen
+    LeaveAlternateScreen,
 };
 
 // combining the terminal and event
@@ -47,8 +48,10 @@ pub enum Event{
     Resize(u16, u16),
 }
 
+// TODO: fix this struct
 pub struct Tui {
     pub terminal: ratatui::Terminal<CrosstermBackend<std::io::Stderr>>,
+    pub size: (u16, u16),
     pub task: Option<JoinHandle<()>>,
     pub event_rx: mpsc::UnboundedReceiver<Event>,
     pub event_tx: mpsc::UnboundedSender<Event>,
@@ -57,12 +60,12 @@ pub struct Tui {
 }
 
 impl Tui {
-    
     // NOTE: creates new Tui
     pub fn new() -> Result<Tui> {
         let backend = CrosstermBackend::new(io::stderr());
         let terminal = Terminal::new(backend)?;
 
+        let size = crossterm::terminal::size()?;
         let (tx, rx) = unbounded_channel::<Event>();
 
         let frame_rate: f64 = 0.0;
@@ -70,7 +73,7 @@ impl Tui {
 
         let task: Option<JoinHandle<()>> = None;
 
-        Ok(Tui { terminal: terminal, task: task, event_rx: rx, event_tx: tx, frame_rate: frame_rate, tick_rate: tick_rate })
+        Ok(Tui { terminal, size, task, event_rx: rx, event_tx: tx, frame_rate, tick_rate })
     }
 
     // NOTE: kicks off tui usage
@@ -145,4 +148,19 @@ impl Tui {
         self.tick_rate = val;
         self
     }
+}
+
+#[test]
+fn test_start_and_close() -> Result<()>{
+    let tui = Tui::new()?;
+
+    tui.enter()?;
+
+    assert!(crossterm::terminal::is_raw_mode_enabled()?);
+
+    tui.exit()?;
+    
+    assert!(!(crossterm::terminal::is_raw_mode_enabled()?));
+
+    Ok(())
 }
