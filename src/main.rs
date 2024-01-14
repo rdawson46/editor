@@ -1,7 +1,10 @@
+#[cfg(test)]
+mod test;
+
 mod editor;
 mod ui;
 mod tui;
-mod word;
+//mod word;
 use crate::editor::Editor;
 use crate::tui::{Tui, Event};
 use crate::ui::{ui, update};
@@ -33,7 +36,6 @@ async fn run() -> Result<()> {
         // check for event
         // update editor
         // render file information
-        let event = tui.next().await?;
         
         tui.terminal.show_cursor()?;
         tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
@@ -45,6 +47,7 @@ async fn run() -> Result<()> {
             })?;
         }
         
+        let event = tui.next().await?;
         update(&mut editor, event, &mut tui);
 
         if editor.should_quit {

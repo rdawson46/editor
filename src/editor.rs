@@ -13,31 +13,9 @@ pub struct Cursor{
     pub possible: (u16, u16)
 }
 
-// TODO: fix movements to be safeer
-    // implement stuff for possible
 impl Cursor{
     fn new() -> Cursor{
         Cursor { current: (0,0), possible: (0,0) }
-    }
-
-    pub fn move_down(&mut self) {
-        //self.current.0 += 1;
-        self.current.1 = self.current.1.checked_add(1).unwrap_or(self.current.1);
-    }
-
-    pub fn move_up(&mut self) {
-        //self.current.1 -= 1;
-        self.current.1 = self.current.1.checked_sub(1).unwrap_or(self.current.1);
-    }
-
-    pub fn move_right(&mut self) {
-        //self.current.0 += 1;
-        self.current.0 = self.current.0.checked_add(1).unwrap_or(self.current.0);
-    }
-
-    pub fn move_left(&mut self) {
-        //self.current.1 -= 1;
-        self.current.0 = self.current.0.checked_sub(1).unwrap_or(self.current.0);
     }
 }
 
@@ -60,6 +38,7 @@ pub struct Editor{
     pub cushion: u8,
 }
 
+// TODO: implement to possible cursor position
 impl Editor{
     pub fn new(path: &Path)-> Result<Editor> {
         // open file passed
@@ -88,6 +67,83 @@ impl Editor{
         }
 
         panic!("No file passed");
+    }
+
+    // NOTE: display functions
+
+    // TODO: return styled paragraph for the current mode to render
+        // add return type -> import from ratatui 
+    pub fn mode_display(&self) {
+        match &self.mode {
+            Mode::Insert => todo!(),
+            Mode::Normal => todo!(),
+        }
+    }
+
+    // NOTE: mode change functions
+
+    // TODO: incorporate changes for each mode
+        // ex: change cursor?
+    pub fn change_mode(&mut self, mode: Mode) {
+        match mode {
+            Mode::Insert => {
+                self.mode = mode;
+            },
+            Mode::Normal => {
+                self.mode = mode;
+            },
+        }
+    }
+
+    // NOTE: cursor movement methods
+
+    // TODO: move x cord when y changes if needed
+        // implement possible position
+    pub fn move_down(&mut self) {
+        //self.cursor.current.1 = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
+        let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
+        let y = std::cmp::min(y, (self.lines.lines.len() - 1).try_into().unwrap());
+
+        self.cursor.current.1 = y;
+
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().length;
+        if line_len == 0 {
+            self.cursor.current.0 = 0;
+        } else {
+            let x = std::cmp::min(line_len - 1, self.cursor.current.0);
+            self.cursor.current.0 = x;
+        }
+    }
+
+    pub fn move_up(&mut self) {
+        self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
+
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().length;
+        if line_len == 0 {
+            self.cursor.current.0 = 0;
+        } else {
+            let x = std::cmp::min(line_len - 1, self.cursor.current.0);
+            self.cursor.current.0 = x;
+        }
+    }
+
+    
+
+    pub fn move_right(&mut self) {
+        // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().length;
+        if line_len == 0 {
+            self.cursor.current.0 = 0;
+        } else{
+            let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
+            let x = std::cmp::min(x, line_len - 1);
+
+            self.cursor.current.0 = x;
+        }
+    }
+
+    pub fn move_left(&mut self) {
+        self.cursor.current.0 = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0);
     }
 }
 

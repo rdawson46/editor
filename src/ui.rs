@@ -1,29 +1,18 @@
 use crate::Event;
 use crate::Tui;
-use crate::X_OFFSET;
-use crossterm::{event::KeyCode};
-
-// NOTE: might be important
-// use crossterm::event::KeyEvent;
+use crossterm::event::KeyCode;
 use crate::editor::{Editor, Mode};
 
-#[warn(unused_imports)]
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Constraint, Direction, Layout},
     style::{Color, Style},
-    text::{Line, Span, Text},
-    widgets::{Block, Borders, Clear, Padding, List, ListItem, Paragraph, Wrap},
+    widgets::{Block, Borders, Padding, Paragraph},
     Frame,
 };
 
-// TODO: create layouts for each section
 
 
 pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
-    // NOTE: IDEA
-        // have 3 sections -> Text, Line nums, Command/Status
-        // create a thread for each section to be rendered, semaphores
-
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -61,12 +50,20 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         text_string.push('\r');
     }
 
-    // NOTE: borders are temp
-
-    f.render_widget(Paragraph::new("Normal")
-                    .block(Block::default()
-                           .borders(Borders::TOP)),
-                    wrapper_layout[1]);
+    match &editor.mode {
+        Mode::Insert => {
+            f.render_widget(Paragraph::new("Insert")
+                            .block(Block::default()
+                                   .borders(Borders::TOP)),
+                                   wrapper_layout[1]);
+        },
+        Mode::Normal => {
+            f.render_widget(Paragraph::new("Normal")
+                            .block(Block::default()
+                                   .borders(Borders::TOP)),
+                                   wrapper_layout[1]);
+        },
+    }
 
     f.render_widget(Paragraph::new(line_nums)
                     .alignment(ratatui::layout::Alignment::Right)
@@ -81,6 +78,8 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
 
 
+//  TODO: fix how modes switch
+//  TODO: move cursor management to editor
 pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
     match event {
         Event::Init => {println!("init found");},
@@ -93,9 +92,18 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::FocusLost => {println!("FocusLost found");},
         Event::Paste(_) => {println!("Paste found");},
         Event::Key(key) => {
-            // FIX: fix this to allow for more flexability
             match editor.mode {
-                Mode::Insert => todo!(),
+                Mode::Insert => {
+                    match key.code {
+                        KeyCode::Char(value) => {
+                            match value {
+                                'Q' => editor.change_mode(Mode::Normal),
+                                _ => {}
+                            }
+                        },
+                        _ => {}
+                    }
+                },
 
                 Mode::Normal => {
                     match key.code {
@@ -103,10 +111,11 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                             // FIX: change to ctrl + q
                             match value {
                                 'Q' => editor.should_quit = true,
-                                'j' => editor.cursor.move_down(),
-                                'k' => editor.cursor.move_up(),
-                                'h' => editor.cursor.move_left(),
-                                'l' => editor.cursor.move_right(),
+                                'j' => editor.move_down(),
+                                'k' => editor.move_up(),
+                                'h' => editor.move_left(),
+                                'l' => editor.move_right(),
+                                'i' => editor.change_mode(Mode::Insert),
                                 _ => {}
                             }
                         },
@@ -121,23 +130,4 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
             tui.size = (x, y);
         },
     }
-}
-
-#[test]
-fn test_cursor(){
-    let filename = "./Cargo.toml";
-    let filename = std::path::Path::new(&filename);
-
-    let mut editor = Editor::new(filename).unwrap();
-    assert_eq!(editor.cursor.current.1, 0);
-    
-    editor.cursor.move_down();
-
-    assert_eq!(editor.cursor.current.1, 1);
-    
-    editor.cursor.move_up();
-    assert_eq!(editor.cursor.current.1, 0);
-
-    editor.cursor.move_up();
-    assert_eq!(editor.cursor.current.1, 0);
 }

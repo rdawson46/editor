@@ -156,17 +156,3 @@ impl Tui {
     }
 }
 
-#[test]
-fn test_start_and_close() -> Result<()>{
-    let tui = Tui::new()?;
-
-    tui.enter()?;
-
-    assert!(crossterm::terminal::is_raw_mode_enabled()?);
-
-    tui.exit()?;
-    
-    assert!(!(crossterm::terminal::is_raw_mode_enabled()?));
-
-    Ok(())
-}
