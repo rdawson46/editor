@@ -4,7 +4,8 @@ use std::fs::File;
 use std::io::{BufReader, BufRead};
 
 pub enum Mode{
-    Insert
+    Insert, 
+    Normal
 }
 
 pub struct Cursor{
@@ -23,6 +24,7 @@ pub struct Line{
     pub length: u16
 }
 
+// fields will be added later
 pub struct Lines{
     pub lines: Vec<Line>
 }
@@ -32,7 +34,8 @@ pub struct Editor{
     pub lines: Lines,
     pub file: PathBuf,
     pub mode: Mode,
-    pub should_quit: bool
+    pub should_quit: bool,
+    pub cushion: u8,
 }
 
 impl Editor{
@@ -59,7 +62,7 @@ impl Editor{
             
             let lines = Lines { lines };
 
-            return Ok(Editor { cursor: Cursor::new(), lines, file: path.to_owned(), mode: Mode::Insert, should_quit: false});
+            return Ok(Editor { cursor: Cursor::new(), lines, file: path.to_owned(), mode: Mode::Normal, should_quit: false, cushion: 0});
         }
 
         panic!("No file passed");
