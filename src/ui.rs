@@ -1,15 +1,14 @@
 use crate::Event;
 use crate::Tui;
+use crate::X_OFFSET;
 use crossterm::event::KeyCode;
 use crate::editor::{Editor, Mode};
-
 use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Style},
     widgets::{Block, Borders, Padding, Paragraph},
     Frame,
 };
-
 
 
 pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
@@ -24,7 +23,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let num_text_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
-                     Constraint::Length(4),
+                     Constraint::Length(X_OFFSET - 1),
                      Constraint::Min(1)
         ])
         .split(wrapper_layout[0]);
@@ -39,7 +38,23 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     // TODO: use i to determine if something should be rendered
     for (i, line) in editor.lines.lines.iter().enumerate() {
         if i >= editor.ptr.into() && i <= usize::from(editor.ptr + editor.size.1)  {
-            let mut i_str = (i + 1).to_string();
+            let mut i_str: String;
+            let current_line = usize::from(editor.ptr + editor.cursor.current.1);
+
+            if current_line != i {
+                if current_line > i {
+                    i_str = (current_line - i).to_string();
+                } else{
+                    i_str = (i - current_line).to_string();
+                }
+
+            } else {
+                i_str = (i + 1).to_string();
+                if i_str.len() <= 2 {
+                    i_str.push(' ');
+                }
+            }
+
             i_str.push('\n');
             i_str.push('\r');
 
@@ -80,7 +95,6 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
                     .block(Block::default()
                        .padding(Padding::new(1, 0, 0, 0))),
                     num_text_layout[1]);
-
 }
 
 
