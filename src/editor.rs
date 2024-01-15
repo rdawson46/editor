@@ -142,6 +142,11 @@ impl Editor{
     }
 
     pub fn move_up(&mut self) {
+        if self.cursor.current.1 == 0 && self.ptr != 0 {
+            self.ptr -= 1;
+            return;
+        }
+
         self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
 
         let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
