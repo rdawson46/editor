@@ -18,6 +18,7 @@ static X_OFFSET: u16 = 5;
 async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
     if filename.is_none() {
+        // TODO: open an empty buffer when no file is provided
         println!("no file provided");
         return Ok(());
     }

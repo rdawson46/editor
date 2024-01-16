@@ -2,6 +2,7 @@ use crate::Event;
 use crate::Tui;
 use crate::X_OFFSET;
 use crossterm::event::KeyCode;
+use crossterm::event::KeyModifiers;
 use crate::editor::{Editor, Mode};
 use ratatui::{
     layout::{Constraint, Direction, Layout},
@@ -105,9 +106,19 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                     match key.code {
                         KeyCode::Char(value) => {
                             match value {
-                                'Q' => editor.change_mode(Mode::Normal),
+                                'c' => {
+                                    if key.modifiers == KeyModifiers::CONTROL {
+                                        editor.change_mode(Mode::Normal)
+                                    }
+                                },
                                 _ => {}
                             }
+                        },
+                        KeyCode::Enter => {},
+                        KeyCode::Backspace => {},
+                        KeyCode::Tab => {},
+                        KeyCode::Esc => {
+                            editor.change_mode(Mode::Normal);
                         },
                         _ => {}
                     }
@@ -127,6 +138,9 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                 _ => {}
                             }
                         },
+                        KeyCode::Esc => {
+                            editor.should_quit = true;
+                        }
                         _ => {}
                     }
                 },
