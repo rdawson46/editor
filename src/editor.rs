@@ -3,10 +3,16 @@ use std::path::{PathBuf, Path};
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::usize;
-use ratatui::layout::Layout;
+use crossterm::{cursor, execute};
+use crossterm::event::{
+    KeyEvent,
+    KeyCode,
+    KeyModifiers
+};
 use ratatui::widgets::{
     Paragraph, Borders, Block
 };
+
 
 pub enum Mode{
     Insert, 
@@ -96,14 +102,57 @@ impl Editor{
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
+                execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
                 self.mode = mode;
             },
             Mode::Normal => {
+                execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
                 self.mode = mode;
             },
         }
     }
 
+    // note: not specifically for inserting a key, but key handling in insert mode
+    pub fn insert_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char(value) => {
+                /*
+                match value {
+                    'c' => {
+                        if key.modifiers == KeyModifiers::CONTROL {
+                            self.change_mode(Mode::Normal)
+                        }
+                    },
+                    _ => {}
+                }
+                */
+
+                if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                    self.change_mode(Mode::Normal);
+                } else {
+                    // get current line
+                    let line_index = usize::from(self.ptr + self.cursor.current.1);
+
+                    // WARN: might create and error, who's to say
+                    let current_line = self.lines.lines.get(line_index).unwrap();
+                    let mut text = current_line.text.clone();
+
+                    let text_index = usize::from(self.cursor.current.0);
+
+                    text.insert(text_index, value);
+                    // doesn't work due to reference
+                    // current_line.text = text;
+                }
+            },
+            KeyCode::Enter => {},
+            KeyCode::Backspace => {},
+            KeyCode::Tab => {},
+            KeyCode::Esc => {
+                self.change_mode(Mode::Normal);
+            },
+            _ => {}
+        }
+    }
 
     // NOTE: cursor movement methods
 
