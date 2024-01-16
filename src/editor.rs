@@ -3,6 +3,10 @@ use std::path::{PathBuf, Path};
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::usize;
+use ratatui::layout::Layout;
+use ratatui::widgets::{
+    Paragraph, Borders, Block
+};
 
 pub enum Mode{
     Insert, 
@@ -74,20 +78,21 @@ impl Editor{
 
     // NOTE: display functions
 
-    // TODO: return styled paragraph for the current mode to render
-        // add return type -> import from ratatui 
-    #[warn(dead_code)]
-    pub fn mode_display(&self) {
+    pub fn mode_display(&self) -> Paragraph {
         match &self.mode {
-            Mode::Insert => todo!(),
-            Mode::Normal => todo!(),
+            Mode::Insert => {
+                Paragraph::new("Insert").block(Block::default().borders(Borders::TOP))
+            },
+            Mode::Normal => {
+                Paragraph::new("Normal").block(Block::default().borders(Borders::TOP))
+            },
         }
     }
 
+
     // NOTE: mode change functions
 
-    // TODO: incorporate changes for each mode
-        // ex: change cursor?
+    // TODO: change cursor?
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
@@ -98,6 +103,7 @@ impl Editor{
             },
         }
     }
+
 
     // NOTE: cursor movement methods
 
@@ -113,15 +119,10 @@ impl Editor{
         }
 
         // TODO: remove uselss bits
-            // note: will need to still check if end of file
 
         // max lines in file
         let line_nums = self.lines.lines.len() - 1;
 
-        // bottom of view
-        // usize::from(self.ptr + self.size.1 - 1)
-        //
-        // if at bottom of view and not file, inc ptr
         
         // NOTE: this line will be useless with pointer movement
         let cap = std::cmp::min(line_nums, usize::from(self.ptr + self.size.1 - 1));

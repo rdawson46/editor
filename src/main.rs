@@ -33,10 +33,6 @@ async fn run() -> Result<()> {
     tui.start();
 
     loop {
-        // check for event
-        // update editor
-        // render file information
-        
         tui.terminal.show_cursor()?;
         tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
 

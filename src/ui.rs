@@ -71,20 +71,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         }
     }
 
-    match &editor.mode {
-        Mode::Insert => {
-            f.render_widget(Paragraph::new("Insert")
-                            .block(Block::default()
-                                   .borders(Borders::TOP)),
-                                   wrapper_layout[1]);
-        },
-        Mode::Normal => {
-            f.render_widget(Paragraph::new("Normal")
-                            .block(Block::default()
-                                   .borders(Borders::TOP)),
-                                   wrapper_layout[1]);
-        },
-    }
+    f.render_widget(editor.mode_display(), wrapper_layout[1]);
 
     f.render_widget(Paragraph::new(line_nums)
                     .alignment(ratatui::layout::Alignment::Right)
