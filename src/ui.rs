@@ -103,33 +103,17 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Key(key) => {
             match editor.mode {
                 Mode::Insert => {
-                    match key.code {
-                        KeyCode::Char(value) => {
-                            match value {
-                                'c' => {
-                                    if key.modifiers == KeyModifiers::CONTROL {
-                                        editor.change_mode(Mode::Normal)
-                                    }
-                                },
-                                _ => {}
-                            }
-                        },
-                        KeyCode::Enter => {},
-                        KeyCode::Backspace => {},
-                        KeyCode::Tab => {},
-                        KeyCode::Esc => {
-                            editor.change_mode(Mode::Normal);
-                        },
-                        _ => {}
-                    }
+                    editor.insert_key(key);
                 },
 
                 Mode::Normal => {
                     match key.code {
                         KeyCode::Char(value) => {
                             // FIX: change to ctrl + q
+                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL{
+                                editor.should_quit = true;
+                            }
                             match value {
-                                'Q' => editor.should_quit = true,
                                 'j' => editor.move_down(),
                                 'k' => editor.move_up(),
                                 'h' => editor.move_left(),

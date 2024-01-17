@@ -31,7 +31,7 @@ impl Cursor{
 }
 
 pub struct Line{
-    pub text: String,
+    pub text: Box<String>,
     pub length: u16
 }
 
@@ -68,7 +68,8 @@ impl Editor{
                 match line {
                     Ok(text) => {
                         let length: u16 = text.len().try_into().unwrap();
-                        lines.push(Line { text, length });
+                        let boxed_text = Box::new(text);
+                        lines.push(Line { text: boxed_text, length });
                     }
                     Err(_) => {}
                 }
@@ -116,17 +117,6 @@ impl Editor{
     pub fn insert_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(value) => {
-                /*
-                match value {
-                    'c' => {
-                        if key.modifiers == KeyModifiers::CONTROL {
-                            self.change_mode(Mode::Normal)
-                        }
-                    },
-                    _ => {}
-                }
-                */
-
                 if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                     self.change_mode(Mode::Normal);
                 } else {
@@ -134,18 +124,32 @@ impl Editor{
                     let line_index = usize::from(self.ptr + self.cursor.current.1);
 
                     // WARN: might create and error, who's to say
-                    let current_line = self.lines.lines.get(line_index).unwrap();
-                    let mut text = current_line.text.clone();
+                    let current_line = &mut self.lines.lines[line_index];
+                    let text = &mut current_line.text;
+                    current_line.length += 1;
 
                     let text_index = usize::from(self.cursor.current.0);
 
                     text.insert(text_index, value);
-                    // doesn't work due to reference
-                    // current_line.text = text;
+                    self.move_right()
                 }
             },
             KeyCode::Enter => {},
-            KeyCode::Backspace => {},
+            KeyCode::Backspace => {
+                let line_index = usize::from(self.ptr + self.cursor.current.1);
+
+                let current_line = &mut self.lines.lines[line_index];
+                let text_index = usize::from(self.cursor.current.0);
+
+                // FIX: very bad, not cool, try again
+                if current_line.length != 0 || text_index == 0 {
+                    current_line.length -= 1;
+                    let text = &mut current_line.text;
+                    text.remove(text_index);
+                } else{
+                    // TODO: implement line removal
+                }
+            },
             KeyCode::Tab => {},
             KeyCode::Esc => {
                 self.change_mode(Mode::Normal);
