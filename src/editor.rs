@@ -164,7 +164,7 @@ impl Editor{
         // next logical y
         let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
 
-        if y > self.size.1 - 1 {
+        if y > self.size.1.checked_sub(1).unwrap_or(0) {
             if usize::from(self.size.1 + self.ptr) < self.lines.lines.len() {
                 self.ptr += 1;
             }

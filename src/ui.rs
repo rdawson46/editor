@@ -134,6 +134,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Resize(x, y) => {
             println!("Resize found");
             tui.size = (x, y);
+            editor.size = (x, y);
         },
     }
 }

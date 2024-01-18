@@ -104,7 +104,10 @@ impl Tui {
                                             _event_tx.send(Event::Key(key)).unwrap();
                                         }
                                     },
-                                    _ => {},
+                                    crossterm::event::Event::Resize(x,y) => {
+                                        _event_tx.send(Event::Resize(x, y)).unwrap();
+                                    }
+                                    _ => {}
                                 }
                             }
                             Some(Err(_)) => {
@@ -130,6 +133,9 @@ impl Tui {
         match &event {
             Ok(ev) => {
                 if let Event::Key(_) = ev {
+                    self.update = true;
+                }
+                if let Event::Resize(_, _) = ev {
                     self.update = true;
                 }
             },

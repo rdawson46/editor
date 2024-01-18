@@ -2,6 +2,7 @@ use core::panic;
 
 use crate::editor::Mode;
 
+// creates error now that it considers tui size
 #[test]
 fn test_editor(){
     use crate::Editor;
