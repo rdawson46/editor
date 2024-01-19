@@ -1,7 +1,15 @@
 use color_eyre::eyre::Result;
 use std::path::{PathBuf, Path};
-use std::fs::File;
-use std::io::{BufReader, BufRead};
+use std::fs::{
+    File,
+    OpenOptions
+};
+use std::io::{
+    BufReader,
+    BufRead,
+    BufWriter,
+};
+use std::io::prelude::*;
 use std::usize;
 use crossterm::{cursor, execute};
 use crossterm::event::{
@@ -335,21 +343,45 @@ impl Editor{
             // write all lines to the file buf saved in self
             
         // FIX: writes ^M to the begining of ever line
+            // use bufwriter
+        /*
+         * NOTE: original idea
+
         let mut total_string = "".to_string();
 
         for line in self.lines.lines.iter() {
             total_string.push_str(&line.text);
 
-            // append \n and \r
             total_string.push('\n');
             total_string.push('\r');
         }
 
-        let status = std::fs::write(&self.file, total_string);
+        let status = std::fs::write(&self.file, total_string.as_bytes());
 
         match status {
             Ok(_) => {},
             Err(_) => panic!("writing to file didn't work"),
         }
+        */
+
+        /*
+         * NOTE: second idea, doesn't work as anticipated
+
+        let file = OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open(&self.file)
+            .expect("Couldn't open file when saving");
+
+        let mut writer = BufWriter::new(file);
+
+        for line in self.lines.lines.iter() {
+            let mut temp_str = "".to_string();
+            let text = &line.text;
+
+            temp_str.push_str(text);
+            writer.write_all(temp_str.as_bytes()).unwrap();
+        }
+        */
     }
 }
