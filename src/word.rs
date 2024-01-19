@@ -22,7 +22,7 @@ impl CharKind {
 }
 
 #[warn(unsafe_code)]
-pub fn find_word_start_forward(line: &str, start_col: usize) -> Option<usize> {
+pub fn find_word_start_forward(line: &String, start_col: usize) -> Option<usize> {
     let mut it = line.chars().enumerate().skip(start_col);
     let mut prev = CharKind::new(it.next()?.1);
     for (col, c) in it {
@@ -36,13 +36,13 @@ pub fn find_word_start_forward(line: &str, start_col: usize) -> Option<usize> {
 }
 
 #[warn(unsafe_code)]
-pub fn find_word_end_forward(line: &str, start_col: usize) -> Option<usize> {
+pub fn find_word_end_forward(line: &String, start_col: usize) -> Option<usize> {
     let mut it = line.chars().enumerate().skip(start_col);
     let mut prev = CharKind::new(it.next()?.1);
     for (col, c) in it {
         let cur = CharKind::new(c);
         if prev != CharKind::Space && prev != cur {
-            return Some(col);
+            return Some(col-1);
         }
         prev = cur;
     }
@@ -50,7 +50,7 @@ pub fn find_word_end_forward(line: &str, start_col: usize) -> Option<usize> {
 }
 
 #[warn(unsafe_code)]
-pub fn find_word_start_backward(line: &str, start_col: usize) -> Option<usize> {
+pub fn find_word_start_backward(line: &String, start_col: usize) -> Option<usize> {
     let idx = line
         .char_indices()
         .nth(start_col)

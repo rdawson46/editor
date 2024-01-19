@@ -4,7 +4,7 @@ mod test;
 mod editor;
 mod ui;
 mod tui;
-//mod word;
+mod word;
 use crate::editor::Editor;
 use crate::tui::{Tui, Event};
 use crate::ui::{ui, update};

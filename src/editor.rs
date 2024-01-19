@@ -12,6 +12,11 @@ use crossterm::event::{
 use ratatui::widgets::{
     Paragraph, Borders, Block
 };
+use crate::word::{
+    find_word_end_forward,
+    find_word_start_forward,
+    find_word_start_backward
+};
 
 
 pub enum Mode{
@@ -51,7 +56,8 @@ pub struct Editor{
     pub size: (u16, u16)
 }
 
-// TODO: implement to possible cursor position
+// TODO: implement saving
+
 impl Editor{
     pub fn new(path: &Path)-> Result<Editor> {
         // open file passed
@@ -88,10 +94,10 @@ impl Editor{
     pub fn mode_display(&self) -> Paragraph {
         match &self.mode {
             Mode::Insert => {
-                Paragraph::new("Insert").block(Block::default().borders(Borders::TOP))
+                Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
             },
             Mode::Normal => {
-                Paragraph::new("Normal").block(Block::default().borders(Borders::TOP))
+                Paragraph::new("-- Normal --").block(Block::default().borders(Borders::TOP))
             },
         }
     }
@@ -99,7 +105,7 @@ impl Editor{
 
     // NOTE: mode change functions
 
-    // TODO: change cursor?
+    // TODO: fix to adjust position of cursor when changing modes
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
@@ -107,6 +113,19 @@ impl Editor{
                 self.mode = mode;
             },
             Mode::Normal => {
+                // recalc cursor pos
+                // get current pos, compare to line length
+
+                let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+                
+                if line_len == 0 {
+                    self.cursor.current.0 = 0;
+                } else {
+                    let x = std::cmp::min(self.cursor.current.0, line_len - 1);
+                    self.cursor.current.0 = x;
+                    self.cursor.possible.0 = x;
+                };
+
                 execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
                 self.mode = mode;
             },
@@ -123,15 +142,21 @@ impl Editor{
                     // get current line
                     let line_index = usize::from(self.ptr + self.cursor.current.1);
 
-                    // WARN: might create and error, who's to say
+                    // WARN: doesn't work on index 0 for empty lines
+                        // issue with cursor movement
                     let current_line = &mut self.lines.lines[line_index];
                     let text = &mut current_line.text;
-                    current_line.length += 1;
 
                     let text_index = usize::from(self.cursor.current.0);
 
-                    text.insert(text_index, value);
-                    self.move_right()
+                    if current_line.length == 0 {
+                        text.push(value);
+                    } else {
+                        text.insert(text_index, value);
+                    }
+
+                    current_line.length += 1;
+                    self.move_right();
                 }
             },
             KeyCode::Enter => {},
@@ -142,10 +167,13 @@ impl Editor{
                 let text_index = usize::from(self.cursor.current.0);
 
                 // FIX: very bad, not cool, try again
-                if current_line.length != 0 || text_index == 0 {
+                    // check if cursor is at eol
+                    // remove from index sooner
+                if current_line.length != 0 && text_index > 0 {
                     current_line.length -= 1;
                     let text = &mut current_line.text;
-                    text.remove(text_index);
+                    text.remove(text_index.checked_sub(1).unwrap_or(0));
+                    self.move_left();
                 } else{
                     // TODO: implement line removal
                 }
@@ -216,17 +244,29 @@ impl Editor{
 
     
 
+    // FIX: cursor movement when in insert mode
     pub fn move_right(&mut self) {
         // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
         let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
         if line_len == 0 {
             self.cursor.current.0 = 0;
         } else{
-            let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-            let x = std::cmp::min(x, line_len - 1);
+            match &self.mode {
+                Mode::Normal => {
+                    let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
+                    let x = std::cmp::min(x, line_len - 1);
 
-            self.cursor.current.0 = x;
-            self.cursor.possible.0 = x;
+                    self.cursor.current.0 = x;
+                    self.cursor.possible.0 = x;
+                },
+                Mode::Insert => {
+                    let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
+                    let x = std::cmp::min(x, line_len);
+
+                    self.cursor.current.0 = x;
+                    self.cursor.possible.0 = x;
+                }
+            }
         }
     }
 
@@ -235,6 +275,81 @@ impl Editor{
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
     }
+
+
+    // NOTE: word movements
+
+    // TODO: make work with going to next line
+    pub fn move_next_word(&mut self) {
+        // conversion
+        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
+
+        // get start col
+        let start_col = usize::from(self.cursor.current.0);
+
+        // find col
+        let next = find_word_start_forward(line, start_col);
+
+        // move cursor
+        match next {
+            Some(index) => {
+                self.cursor.current.0 = index as u16;
+                self.cursor.possible.0 = index as u16;
+            },
+            None => {}
+        }
+    }
+
+    pub fn move_end_word(&mut self) {
+        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
+        let start_col = usize::from(self.cursor.current.0);
+        let next = find_word_end_forward(line, start_col);
+        match next {
+            Some(index) => {
+                self.cursor.current.0 = index as u16;
+                self.cursor.possible.0 = index as u16;
+            },
+            None => {}
+        }
+    }
+
+    pub fn move_back_word(&mut self) {
+        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
+        let start_col = usize::from(self.cursor.current.0);
+        let next = find_word_start_backward(line, start_col);
+        match next {
+            Some(index) => {
+                self.cursor.current.0 = index as u16;
+                self.cursor.possible.0 = index as u16;
+            },
+            None => {}
+        }
+    }
+
+
+    // NOTE: saving functions
+
+    pub fn save(&mut self) {
+        // TODO: steps idea
+            // open file for writing
+            // write all lines to the file buf saved in self
+            
+        // FIX: writes ^M to the begining of ever line
+        let mut total_string = "".to_string();
+
+        for line in self.lines.lines.iter() {
+            total_string.push_str(&line.text);
+
+            // append \n and \r
+            total_string.push('\n');
+            total_string.push('\r');
+        }
+
+        let status = std::fs::write(&self.file, total_string);
+
+        match status {
+            Ok(_) => {},
+            Err(_) => panic!("writing to file didn't work"),
+        }
+    }
 }
-
-

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use crate::Event;
 use crate::Tui;
 use crate::X_OFFSET;
@@ -5,14 +7,16 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyModifiers;
 use crate::editor::{Editor, Mode};
 use ratatui::{
-    layout::{Constraint, Direction, Layout},
+    layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, Borders, Padding, Paragraph},
     Frame,
 };
 
+// TODO: replace editor.ptr with y_ptr and x_ptr
+    // for horizontal scrolling
 
-pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
+fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -28,6 +32,14 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
                      Constraint::Min(1)
         ])
         .split(wrapper_layout[0]);
+
+    return (wrapper_layout, num_text_layout);
+}
+
+
+
+pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
+    let (wrapper_layout, num_text_layout) = get_layouts(f);
     
     editor.size = (num_text_layout[1].width, num_text_layout[1].height);
 
@@ -110,8 +122,10 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                     match key.code {
                         KeyCode::Char(value) => {
                             // FIX: change to ctrl + q
-                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL{
+                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                                 editor.should_quit = true;
+                            } else if value == 's' && key.modifiers == KeyModifiers::CONTROL {
+                                editor.save();
                             }
                             match value {
                                 'j' => editor.move_down(),
@@ -119,6 +133,13 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                 'h' => editor.move_left(),
                                 'l' => editor.move_right(),
                                 'i' => editor.change_mode(Mode::Insert),
+                                'a' => {
+                                    editor.change_mode(Mode::Insert);
+                                    editor.move_right();
+                                },
+                                'w' => editor.move_next_word(),
+                                'b' => editor.move_back_word(),
+                                'e' => editor.move_end_word(),
                                 _ => {}
                             }
                         },
