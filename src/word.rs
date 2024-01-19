@@ -1,6 +1,5 @@
 use std::char;
 
-#[warn(unsafe_code)]
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum CharKind {
     Space,
@@ -8,7 +7,6 @@ enum CharKind {
     Other,
 }
 
-#[warn(unsafe_code)]
 impl CharKind {
     fn new(c: char) -> Self{
         if c.is_whitespace() {
@@ -21,7 +19,6 @@ impl CharKind {
     }
 }
 
-#[warn(unsafe_code)]
 pub fn find_word_start_forward(line: &String, start_col: usize) -> Option<usize> {
     let mut it = line.chars().enumerate().skip(start_col);
     let mut prev = CharKind::new(it.next()?.1);
@@ -35,7 +32,6 @@ pub fn find_word_start_forward(line: &String, start_col: usize) -> Option<usize>
     None
 }
 
-#[warn(unsafe_code)]
 pub fn find_word_end_forward(line: &String, start_col: usize) -> Option<usize> {
     let mut it = line.chars().enumerate().skip(start_col);
     let mut prev = CharKind::new(it.next()?.1);
@@ -49,7 +45,6 @@ pub fn find_word_end_forward(line: &String, start_col: usize) -> Option<usize> {
     None
 }
 
-#[warn(unsafe_code)]
 pub fn find_word_start_backward(line: &String, start_col: usize) -> Option<usize> {
     let idx = line
         .char_indices()
