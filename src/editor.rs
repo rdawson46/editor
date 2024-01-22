@@ -1,15 +1,10 @@
 use color_eyre::eyre::Result;
 use std::path::{PathBuf, Path};
-use std::fs::{
-    File,
-    OpenOptions
-};
+use std::fs::File;
 use std::io::{
     BufReader,
     BufRead,
-    BufWriter,
 };
-use std::io::prelude::*;
 use std::usize;
 use crossterm::{cursor, execute};
 use crossterm::event::{
@@ -64,7 +59,7 @@ pub struct Editor{
     pub size: (u16, u16)
 }
 
-// TODO: implement saving
+// TODO: implement new line and removal of lines
 
 impl Editor{
     pub fn new(path: &Path)-> Result<Editor> {
@@ -113,7 +108,6 @@ impl Editor{
 
     // NOTE: mode change functions
 
-    // TODO: fix to adjust position of cursor when changing modes
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
@@ -140,7 +134,7 @@ impl Editor{
         }
     }
 
-    // note: not specifically for inserting a key, but key handling in insert mode
+    // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
         match key.code {
             KeyCode::Char(value) => {
@@ -167,7 +161,30 @@ impl Editor{
                     self.move_right();
                 }
             },
-            KeyCode::Enter => {},
+            KeyCode::Enter => {
+                // add new line
+                //
+                // just the basics right now
+                    // shuffle text to next line when needed
+                        // get current index
+                        // get rest of text
+                        // remove from current line
+                        // set as text for next line
+                let curr_line = usize::from(self.ptr + self.cursor.current.1);
+
+                let curr_index = usize::from(self.cursor.current.0);
+
+                let new_str = self.lines.lines[curr_line].text.split_off(curr_index);
+
+                let len: u16 = new_str.len() as u16;
+
+                let new_line: Line = Line { text: Box::new(new_str), length: len };
+
+                self.lines.lines.insert(curr_line + 1, new_line);
+                self.move_down();
+                self.cursor.current.0 = 0;
+                self.cursor.possible.0 = 0;
+            },
             KeyCode::Backspace => {
                 let line_index = usize::from(self.ptr + self.cursor.current.1);
 
@@ -177,6 +194,7 @@ impl Editor{
                 // FIX: very bad, not cool, try again
                     // check if cursor is at eol
                     // remove from index sooner
+                        // what does this mean?
                 if current_line.length != 0 && text_index > 0 {
                     current_line.length -= 1;
                     let text = &mut current_line.text;
@@ -342,10 +360,7 @@ impl Editor{
             // open file for writing
             // write all lines to the file buf saved in self
             
-        // FIX: writes ^M to the begining of ever line
-            // use bufwriter
-        /*
-         * NOTE: original idea
+         // NOTE: original idea, too much extra memory
 
         let mut total_string = "".to_string();
 
@@ -353,7 +368,6 @@ impl Editor{
             total_string.push_str(&line.text);
 
             total_string.push('\n');
-            total_string.push('\r');
         }
 
         let status = std::fs::write(&self.file, total_string.as_bytes());
@@ -362,26 +376,5 @@ impl Editor{
             Ok(_) => {},
             Err(_) => panic!("writing to file didn't work"),
         }
-        */
-
-        /*
-         * NOTE: second idea, doesn't work as anticipated
-
-        let file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open(&self.file)
-            .expect("Couldn't open file when saving");
-
-        let mut writer = BufWriter::new(file);
-
-        for line in self.lines.lines.iter() {
-            let mut temp_str = "".to_string();
-            let text = &line.text;
-
-            temp_str.push_str(text);
-            writer.write_all(temp_str.as_bytes()).unwrap();
-        }
-        */
     }
 }
