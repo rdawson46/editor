@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::usize;
 
 use crate::Event;
 use crate::Tui;
@@ -49,39 +50,43 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
 
     // TODO: use i to determine if something should be rendered
-    for (i, line) in editor.lines.lines.iter().enumerate() {
-        if i >= editor.ptr.into() && i <= usize::from(editor.ptr + editor.size.1)  {
-            let mut i_str: String;
-            let current_line = usize::from(editor.ptr + editor.cursor.current.1);
-
-            if current_line != i {
-                if current_line > i {
-                    i_str = (current_line - i).to_string();
-                } else{
-                    i_str = (i - current_line).to_string();
-                }
-
-            } else {
-                i_str = (i + 1).to_string();
-                if i_str.len() <= 2 {
-                    i_str.push(' ');
-                }
-            }
-
-            i_str.push('\n');
-            i_str.push('\r');
-
-            for char in i_str.chars() {
-                line_nums.push(char);
-            }
-
-            for char in line.text.chars() {
-                text_string.push(char);
-            }
-
-            text_string.push('\n');
-            text_string.push('\r');
+        // use skip
+     
+    for (i, line) in editor.lines.lines.iter().skip(editor.ptr.into()).enumerate() {
+        if i > usize::from(editor.ptr + editor.size.1) {
+            break;
         }
+
+        let mut i_str: String;
+        let current_line = usize::from(editor.ptr + editor.cursor.current.1);
+
+        if current_line != i {
+            if current_line > i {
+                i_str = (current_line - i).to_string();
+            } else{
+                i_str = (i - current_line).to_string();
+            }
+
+        } else {
+            i_str = (i + 1).to_string();
+            if i_str.len() <= 2 {
+                i_str.push(' ');
+            }
+        }
+
+        i_str.push('\n');
+        i_str.push('\r');
+
+        for char in i_str.chars() {
+            line_nums.push(char);
+        }
+
+        for char in line.text.chars() {
+            text_string.push(char);
+        }
+
+        text_string.push('\r');
+        text_string.push('\n');
     }
 
     f.render_widget(editor.mode_display(), wrapper_layout[1]);

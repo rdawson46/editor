@@ -134,6 +134,7 @@ impl Editor{
         }
     }
 
+    
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
         match key.code {
@@ -144,8 +145,6 @@ impl Editor{
                     // get current line
                     let line_index = usize::from(self.ptr + self.cursor.current.1);
 
-                    // WARN: doesn't work on index 0 for empty lines
-                        // issue with cursor movement
                     let current_line = &mut self.lines.lines[line_index];
                     let text = &mut current_line.text;
 
@@ -162,14 +161,6 @@ impl Editor{
                 }
             },
             KeyCode::Enter => {
-                // add new line
-                //
-                // just the basics right now
-                    // shuffle text to next line when needed
-                        // get current index
-                        // get rest of text
-                        // remove from current line
-                        // set as text for next line
                 let curr_line = usize::from(self.ptr + self.cursor.current.1);
 
                 let curr_index = usize::from(self.cursor.current.0);
@@ -191,10 +182,7 @@ impl Editor{
                 let current_line = &mut self.lines.lines[line_index];
                 let text_index = usize::from(self.cursor.current.0);
 
-                // FIX: very bad, not cool, try again
-                    // check if cursor is at eol
-                    // remove from index sooner
-                        // what does this mean?
+                // NOTE: might be able to remove length != 0, since text index will <= 0
                 if current_line.length != 0 && text_index > 0 {
                     current_line.length -= 1;
                     let text = &mut current_line.text;
@@ -202,6 +190,19 @@ impl Editor{
                     self.move_left();
                 } else{
                     // TODO: implement line removal
+                        // pop line from lines
+                        // take text out of struct
+                        // append it to end of previoud line
+                        // double check that not at top file
+                    if line_index == 0 {
+                        return;
+                    }
+                    let text = &current_line.text;
+                    self.lines.lines.remove(line_index);
+                    let line_above = self.lines.lines.get_mut(line_index-1).unwrap();
+                    // line_above.text = line_above.text + text;
+                    // find something to do this idea
+                    // line_above.text.extend(text.as_bytes().iter());
                 }
             },
             KeyCode::Tab => {},

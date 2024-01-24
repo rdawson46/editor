@@ -1,5 +1,11 @@
-# editor
+# Editor
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
+# Test
+This file was written in the editor.
+
 ### Current State
-working on the UI. Currently using Ratatui, however looking to remove it and just use Crossterm.
+Currently working on add Vim motions and a command buffer.
+
+### Warning
+Performs better on Linux than Windows. Windows has performance issues when rendering and cursor movement.
