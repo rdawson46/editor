@@ -182,27 +182,27 @@ impl Editor{
                 let current_line = &mut self.lines.lines[line_index];
                 let text_index = usize::from(self.cursor.current.0);
 
-                // NOTE: might be able to remove length != 0, since text index will <= 0
                 if current_line.length != 0 && text_index > 0 {
                     current_line.length -= 1;
                     let text = &mut current_line.text;
                     text.remove(text_index.checked_sub(1).unwrap_or(0));
                     self.move_left();
                 } else{
-                    // TODO: implement line removal
-                        // pop line from lines
-                        // take text out of struct
-                        // append it to end of previoud line
-                        // double check that not at top file
+                    // TODO: cursor movement
                     if line_index == 0 {
                         return;
                     }
-                    let text = &current_line.text;
+
+                    self.move_up();
+                    self.move_end_of_line();
+
+                    let current_line = &self.lines.lines[line_index];
+                    let text = current_line.text.clone();
                     self.lines.lines.remove(line_index);
                     let line_above = self.lines.lines.get_mut(line_index-1).unwrap();
-                    // line_above.text = line_above.text + text;
-                    // find something to do this idea
-                    // line_above.text.extend(text.as_bytes().iter());
+
+                    line_above.text = Box::new(format!("{}{}", *line_above.text, &text));
+                    line_above.length = line_above.text.len().try_into().unwrap();
                 }
             },
             KeyCode::Tab => {},
@@ -302,6 +302,28 @@ impl Editor{
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
     }
+
+    pub fn move_end_of_line(&mut self) {
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+        if line_len == 0 {
+            self.cursor.current.0 = 0;
+            return;
+        }
+
+        match &self.mode {
+            Mode::Normal => {
+                self.cursor.current.0 = line_len - 1;
+                self.cursor.possible.0 = line_len - 1;
+            },
+            Mode::Insert => {
+                self.cursor.current.0 = line_len;
+                self.cursor.possible.0 = line_len;
+            }
+        }
+    }
+
+    #[warn(dead_code)]
+    pub fn move_begin_of_line(&mut self){}
 
 
     // NOTE: word movements
