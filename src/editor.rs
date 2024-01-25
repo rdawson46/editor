@@ -55,7 +55,8 @@ pub struct Editor{
     pub mode: Mode,
     pub should_quit: bool,
     pub cushion: u8,
-    pub ptr: u16,
+    pub ptr_y: u16,
+    pub ptr_x: u16,
     pub size: (u16, u16)
 }
 
@@ -86,7 +87,7 @@ impl Editor{
             
             let lines = Lines { lines };
 
-            return Ok(Editor { cursor: Cursor::new(), lines, file: path.to_owned(), mode: Mode::Normal, should_quit: false, cushion: 0, ptr: 0, size: (0, 0) });
+            return Ok(Editor { cursor: Cursor::new(), lines, file: path.to_owned(), mode: Mode::Normal, should_quit: false, cushion: 0, ptr_y: 0, ptr_x: 0, size: (0, 0) });
         }
 
         panic!("No file passed");
@@ -118,7 +119,7 @@ impl Editor{
                 // recalc cursor pos
                 // get current pos, compare to line length
 
-                let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+                let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
                 
                 if line_len == 0 {
                     self.cursor.current.0 = 0;
@@ -143,7 +144,7 @@ impl Editor{
                     self.change_mode(Mode::Normal);
                 } else {
                     // get current line
-                    let line_index = usize::from(self.ptr + self.cursor.current.1);
+                    let line_index = usize::from(self.ptr_y + self.cursor.current.1);
 
                     let current_line = &mut self.lines.lines[line_index];
                     let text = &mut current_line.text;
@@ -161,7 +162,7 @@ impl Editor{
                 }
             },
             KeyCode::Enter => {
-                let curr_line = usize::from(self.ptr + self.cursor.current.1);
+                let curr_line = usize::from(self.ptr_y + self.cursor.current.1);
 
                 let curr_index = usize::from(self.cursor.current.0);
 
@@ -177,7 +178,7 @@ impl Editor{
                 self.cursor.possible.0 = 0;
             },
             KeyCode::Backspace => {
-                let line_index = usize::from(self.ptr + self.cursor.current.1);
+                let line_index = usize::from(self.ptr_y + self.cursor.current.1);
 
                 let current_line = &mut self.lines.lines[line_index];
                 let text_index = usize::from(self.cursor.current.0);
@@ -220,8 +221,8 @@ impl Editor{
         let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
 
         if y > self.size.1.checked_sub(1).unwrap_or(0) {
-            if usize::from(self.size.1 + self.ptr) < self.lines.lines.len() {
-                self.ptr += 1;
+            if usize::from(self.size.1 + self.ptr_y) < self.lines.lines.len() {
+                self.ptr_y += 1;
             }
             return;
         }
@@ -233,12 +234,12 @@ impl Editor{
 
         
         // NOTE: this line will be useless with pointer movement
-        let cap = std::cmp::min(line_nums, usize::from(self.ptr + self.size.1 - 1));
+        let cap = std::cmp::min(line_nums, usize::from(self.ptr_y + self.size.1 - 1));
         let y = std::cmp::min(y, cap.try_into().unwrap());
 
         self.cursor.current.1 = y;
 
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
 
 
         if line_len == 0 {
@@ -251,14 +252,14 @@ impl Editor{
     }
 
     pub fn move_up(&mut self) {
-        if self.cursor.current.1 == 0 && self.ptr != 0 {
-            self.ptr -= 1;
+        if self.cursor.current.1 == 0 && self.ptr_y != 0 {
+            self.ptr_y -= 1;
             return;
         }
 
         self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
 
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
 
         if line_len == 0 {
             self.cursor.current.0 = 0;
@@ -274,7 +275,7 @@ impl Editor{
     // FIX: cursor movement when in insert mode
     pub fn move_right(&mut self) {
         // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
         if line_len == 0 {
             self.cursor.current.0 = 0;
         } else{
@@ -298,13 +299,13 @@ impl Editor{
     }
 
     pub fn move_left(&mut self) {
-        let x = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0 + self.ptr);
+        let x = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0 + self.ptr_y);
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
     }
 
     pub fn move_end_of_line(&mut self) {
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr)).unwrap().length;
+        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
         if line_len == 0 {
             self.cursor.current.0 = 0;
             return;

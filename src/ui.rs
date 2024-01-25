@@ -52,13 +52,13 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     // TODO: use i to determine if something should be rendered
         // use skip
      
-    for (i, line) in editor.lines.lines.iter().skip(editor.ptr.into()).enumerate() {
-        if i > usize::from(editor.ptr + editor.size.1) {
+    for (i, line) in editor.lines.lines.iter().skip(editor.ptr_y.into()).enumerate() {
+        if i > usize::from(editor.ptr_y + editor.size.1) {
             break;
         }
 
         let mut i_str: String;
-        let current_line = usize::from(editor.ptr + editor.cursor.current.1);
+        let current_line = usize::from(editor.ptr_y + editor.cursor.current.1);
 
         if current_line != i {
             if current_line > i {
