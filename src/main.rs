@@ -2,6 +2,8 @@
 mod test;
 
 mod editor;
+mod motion;
+mod command;
 mod ui;
 mod tui;
 mod word;

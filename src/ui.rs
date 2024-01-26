@@ -17,6 +17,7 @@ use ratatui::{
 // TODO: replace editor.ptr with y_ptr and x_ptr
     // for horizontal scrolling
 
+// TODO: make layout for mode/command and motion status
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
