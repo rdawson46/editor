@@ -1,11 +1,14 @@
 # Editor
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
-# Test
-This file was written in the editor.
+# Test Branch
+This branch will feature adding a vim like command buffer
 
-### Current State
-Currently working on add Vim motions and a command buffer.
+## Todo
+* add the command buffer struct to the file tree
+* implement into the editor struct
+* add basic ui element
+* add commands into 
 
-### Warning
-Performs better on Linux than Windows. Windows has performance issues when rendering and cursor movement.
+* later implement ptr_x for longer lines
+
