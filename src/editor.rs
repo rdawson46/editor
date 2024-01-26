@@ -60,8 +60,6 @@ pub struct Editor{
     pub size: (u16, u16)
 }
 
-// TODO: implement new line and removal of lines
-
 impl Editor{
     pub fn new(path: &Path)-> Result<Editor> {
         // open file passed
@@ -189,7 +187,6 @@ impl Editor{
                     text.remove(text_index.checked_sub(1).unwrap_or(0));
                     self.move_left();
                 } else{
-                    // TODO: cursor movement
                     if line_index == 0 {
                         return;
                     }
@@ -380,11 +377,7 @@ impl Editor{
     // NOTE: saving functions
 
     pub fn save(&mut self) {
-        // TODO: steps idea
-            // open file for writing
-            // write all lines to the file buf saved in self
-            
-         // NOTE: original idea, too much extra memory
+         // NOTE: too much extra memory
 
         let mut total_string = "".to_string();
 
