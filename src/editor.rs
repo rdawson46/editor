@@ -20,10 +20,13 @@ use crate::word::{
     find_word_start_forward,
     find_word_start_backward
 };
+use crate::command::Command;
+use crate::motion::MotionBuffer;
 
 
 pub enum Mode{
     Insert, 
+    Command,
     Normal
 }
 
@@ -52,6 +55,8 @@ pub struct Editor{
     pub cursor: Cursor,
     pub lines: Lines,
     pub file: PathBuf,
+    pub command: Command,
+    pub motion: MotionBuffer,
     pub mode: Mode,
     pub should_quit: bool,
     pub cushion: u8,
@@ -85,7 +90,18 @@ impl Editor{
             
             let lines = Lines { lines };
 
-            return Ok(Editor { cursor: Cursor::new(), lines, file: path.to_owned(), mode: Mode::Normal, should_quit: false, cushion: 0, ptr_y: 0, ptr_x: 0, size: (0, 0) });
+            return Ok(Editor {
+                cursor: Cursor::new(),
+                lines, file: path.to_owned(),
+                mode: Mode::Normal,
+                command: Command::new(),
+                motion: MotionBuffer::new(),
+                should_quit: false,
+                cushion: 0,
+                ptr_y: 0,
+                ptr_x: 0,
+                size: (0, 0)
+            });
         }
 
         panic!("No file passed");
@@ -101,6 +117,9 @@ impl Editor{
             Mode::Normal => {
                 Paragraph::new("-- Normal --").block(Block::default().borders(Borders::TOP))
             },
+            Mode::Command => {
+                Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
+            }
         }
     }
 
@@ -112,6 +131,12 @@ impl Editor{
             Mode::Insert => {
                 execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
                 self.mode = mode;
+            },
+            Mode::Command => {
+                // TODO: 
+                    // figure out how to move cursor
+                self.mode = mode;
+                todo!()
             },
             Mode::Normal => {
                 // recalc cursor pos
@@ -290,6 +315,9 @@ impl Editor{
 
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
+                },
+                Mode::Command => {
+                    todo!()
                 }
             }
         }
@@ -316,7 +344,8 @@ impl Editor{
             Mode::Insert => {
                 self.cursor.current.0 = line_len;
                 self.cursor.possible.0 = line_len;
-            }
+            },
+            Mode::Command => {}
         }
     }
 

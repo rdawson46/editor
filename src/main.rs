@@ -7,8 +7,14 @@ mod command;
 mod ui;
 mod tui;
 mod word;
-use crate::editor::Editor;
-use crate::tui::{Tui, Event};
+use crate::editor::{
+    Editor,
+    Mode
+};
+use crate::tui::{
+    Tui,
+    Event
+};
 use crate::ui::{ui, update};
 
 use color_eyre::eyre::Result;
@@ -37,7 +43,15 @@ async fn run() -> Result<()> {
 
     loop {
         tui.terminal.show_cursor()?;
-        tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
+        
+        match &editor.mode {
+            Mode::Command => {
+                // TODO: set cursor to command line
+            },
+            _ => {
+                tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
+            }
+        };
 
         if tui.update {
             tui.update = false;

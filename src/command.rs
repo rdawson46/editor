@@ -1,7 +1,7 @@
 
-struct Command {
-    text: String,
-    history: Vec<String>
+pub struct Command {
+    pub text: String,
+    pub history: Vec<String>
 }
 
 impl Command {

@@ -10,7 +10,7 @@ use crate::editor::{Editor, Mode};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, Borders, Padding, Paragraph},
+    widgets::{Block, Padding, Paragraph},
     Frame,
 };
 
@@ -124,6 +124,10 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                     editor.insert_key(key);
                 },
 
+                Mode::Command => {
+                    
+                },
+
                 Mode::Normal => {
                     match key.code {
                         KeyCode::Char(value) => {
@@ -134,6 +138,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                 editor.save();
                             }
                             match value {
+                                ':' => editor.change_mode(Mode::Command),
                                 'j' => editor.move_down(),
                                 'k' => editor.move_up(),
                                 'h' => editor.move_left(),

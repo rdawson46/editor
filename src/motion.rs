@@ -2,7 +2,7 @@ use crate::Result;
 
 pub struct MotionBuffer{
     pub text: String,
-    pub time: u32,
+    pub time: u32, // might not be needed and only for leader key?
 }
 
 
