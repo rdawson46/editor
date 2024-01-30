@@ -133,10 +133,7 @@ impl Editor{
                 self.mode = mode;
             },
             Mode::Command => {
-                // TODO: 
-                    // figure out how to move cursor
                 self.mode = mode;
-                todo!()
             },
             Mode::Normal => {
                 // recalc cursor pos
@@ -294,7 +291,7 @@ impl Editor{
 
     
 
-    // FIX: cursor movement when in insert mode
+    // TODO: cursor movement when in command mode
     pub fn move_right(&mut self) {
         // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
         let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
@@ -349,8 +346,11 @@ impl Editor{
         }
     }
 
-    #[warn(dead_code)]
-    pub fn move_begin_of_line(&mut self){}
+    // TODO: implemet this function
+    pub fn move_begin_of_line(&mut self){
+        self.cursor.current.0 = 0;
+        self.cursor.possible.0 = 0;
+    }
 
 
     // NOTE: word movements

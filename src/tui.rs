@@ -48,6 +48,7 @@ pub enum Event{
 }
 
 // TODO: fix this struct
+    // why it's awesome
 pub struct Tui {
     pub terminal: ratatui::Terminal<CrosstermBackend<std::io::Stderr>>,
     pub size: (u16, u16),
@@ -75,8 +76,6 @@ impl Tui {
     }
 
     
-    // TODO: remove render rate and used a bool if change detected
-
     // NOTE: kicks off tui usage
     pub fn start(&mut self) {
         let tick_rate = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);

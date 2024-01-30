@@ -49,10 +49,6 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let mut line_nums = "".to_string();
     let mut text_string = "".to_string();
 
-
-    // TODO: use i to determine if something should be rendered
-        // use skip
-     
     for (i, line) in editor.lines.lines.iter().skip(editor.ptr_y.into()).enumerate() {
         if i > usize::from(editor.ptr_y + editor.size.1) {
             break;
@@ -119,13 +115,38 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::FocusLost => {println!("FocusLost found");},
         Event::Paste(_) => {println!("Paste found");},
         Event::Key(key) => {
+
+            // TODO: add movable cursor with arrow keys
             match editor.mode {
                 Mode::Insert => {
                     editor.insert_key(key);
                 },
 
                 Mode::Command => {
-                    
+                    match key.code {
+                        KeyCode::Char(value) => {
+                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                                editor.change_mode(Mode::Normal);
+                            } else {
+                                editor.command.text.push(value);
+                            }
+                        },
+                        KeyCode::Esc => {
+                            editor.change_mode(Mode::Normal);
+                        }
+                        KeyCode::Enter => {
+                            editor.command.confirm();
+                        },
+                        KeyCode::Backspace => {
+                            if editor.command.text.len() > 0 {
+                                // TODO: add movable cursor
+                                editor.command.text.pop();
+                            } else {
+                                editor.change_mode(Mode::Normal);
+                            }
+                        },
+                        _ => {}
+                    }
                 },
 
                 Mode::Normal => {
@@ -151,6 +172,16 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                 'w' => editor.move_next_word(),
                                 'b' => editor.move_back_word(),
                                 'e' => editor.move_end_word(),
+                                '0' => editor.move_begin_of_line(),
+                                '$' => editor.move_end_of_line(),
+                                'I' => {
+                                    editor.change_mode(Mode::Insert);
+                                    editor.move_begin_of_line();
+                                },
+                                'A' => {
+                                    editor.change_mode(Mode::Insert);
+                                    editor.move_end_of_line();
+                                },
                                 _ => {}
                             }
                         },
@@ -165,7 +196,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Mouse(_) => {println!("Mouse found");},
         Event::Resize(x, y) => {
             tui.size = (x, y);
-            editor.size = (x, y);
         },
     }
 }

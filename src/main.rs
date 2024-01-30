@@ -27,6 +27,7 @@ async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
     if filename.is_none() {
         // TODO: open an empty buffer when no file is provided
+            // requires a rework?
         println!("no file provided");
         return Ok(());
     }
@@ -47,6 +48,7 @@ async fn run() -> Result<()> {
         match &editor.mode {
             Mode::Command => {
                 // TODO: set cursor to command line
+                tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
             },
             _ => {
                 tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
