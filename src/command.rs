@@ -18,14 +18,8 @@ impl Command {
     }
 
     pub fn confirm(&mut self) -> Option<CommandKey>{
-        // make a command code enum in editor.rs
-        // return an option of a code
-        // handle after in update function
         let command = self.text.clone();
         self.text = String::new();
-
-        // parse command
-        // TODO: parse for numbers for line jump
 
         let ck: Option<CommandKey>;
 
@@ -37,7 +31,6 @@ impl Command {
                 "q" => Some(CommandKey::Quit),
                 "w" => Some(CommandKey::Save),
                 "history" => Some(CommandKey::History),
-                "number" => Some(CommandKey::Line(0)),
                 _ => None
             };
         }

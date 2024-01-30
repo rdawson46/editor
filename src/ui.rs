@@ -18,7 +18,7 @@ use ratatui::{
 // TODO: replace editor.ptr with y_ptr and x_ptr
     // for horizontal scrolling
 
-// TODO: make layout for mode/command and motion status
+
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
@@ -201,7 +201,9 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                     editor.change_mode(Mode::Insert);
                                     editor.move_end_of_line();
                                 },
-                                _ => {}
+                                val => {
+                                    editor.motion.push(val)
+                                }
                             }
                         },
                         KeyCode::Esc => {
