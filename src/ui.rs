@@ -4,6 +4,7 @@ use std::usize;
 use crate::Event;
 use crate::Tui;
 use crate::X_OFFSET;
+use crate::command::CommandKey;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyModifiers;
 use crate::editor::{Editor, Mode};
@@ -105,15 +106,15 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 //  TODO: move cursor management to editor
 pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
     match event {
-        Event::Init => {println!("init found");},
-        Event::Quit => {println!("quit found");},
-        Event::Error => {println!("Error found");},
-        Event::Closed => {println!("Closed found");},
+        Event::Init => {},
+        Event::Quit => {},
+        Event::Error => {},
+        Event::Closed => {},
         Event::Tick => {},
         Event::Render => {},
-        Event::FocusGained => {println!("FocusGained found");},
-        Event::FocusLost => {println!("FocusLost found");},
-        Event::Paste(_) => {println!("Paste found");},
+        Event::FocusGained => {},
+        Event::FocusLost => {},
+        Event::Paste(_) => {},
         Event::Key(key) => {
 
             // TODO: add movable cursor with arrow keys
@@ -135,7 +136,26 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                             editor.change_mode(Mode::Normal);
                         }
                         KeyCode::Enter => {
-                            editor.command.confirm();
+                            let command = editor.command.confirm();
+
+                            match command {
+                                Some(command) => {
+                                    match command {
+                                        CommandKey::Save => editor.save(),
+                                        CommandKey::Quit => editor.should_quit = true,
+                                        CommandKey::Line(number) => {
+                                            editor.go_to_line(number);
+                                        },
+                                        CommandKey::SaveAndQuit => {
+                                            editor.save();
+                                            editor.should_quit = true;
+                                        },
+                                        CommandKey::History => todo!(),
+                                    }
+                                },
+                                None => {}
+                            }
+                            editor.change_mode(Mode::Normal);
                         },
                         KeyCode::Backspace => {
                             if editor.command.text.len() > 0 {
@@ -152,7 +172,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                 Mode::Normal => {
                     match key.code {
                         KeyCode::Char(value) => {
-                            // FIX: change to ctrl + q
                             if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                                 editor.should_quit = true;
                             } else if value == 's' && key.modifiers == KeyModifiers::CONTROL {
@@ -193,7 +212,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                 },
             }
         },
-        Event::Mouse(_) => {println!("Mouse found");},
+        Event::Mouse(_) => {},
         Event::Resize(x, y) => {
             tui.size = (x, y);
         },

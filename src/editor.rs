@@ -402,6 +402,14 @@ impl Editor{
         }
     }
 
+    pub fn go_to_line(&mut self, index: usize) {
+        let index = index - 1;
+        if index < self.lines.lines.len() {
+            self.cursor.current.0 = index as u16;
+            self.cursor.current.1 = index as u16;
+        } 
+    }
+
 
     // NOTE: saving functions
 
