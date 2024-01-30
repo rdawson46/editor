@@ -12,8 +12,14 @@ impl MotionBuffer {
     }
 
     // might have to be async for timming
-    pub fn parse() -> Result<()> {
+    #[warn(dead_code)]
+    pub fn parse(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    #[warn(dead_code)]
+    pub fn push(&mut self, chr: char) {
+        self.text.push(chr);
     }
 }
 
