@@ -172,9 +172,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                 Mode::Normal => {
                     match key.code {
                         KeyCode::Char(value) => {
-                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                                editor.should_quit = true;
-                            } else if value == 's' && key.modifiers == KeyModifiers::CONTROL {
+                            if value == 's' && key.modifiers == KeyModifiers::CONTROL {
                                 editor.save();
                             }
                             match value {
@@ -207,9 +205,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                 }
                             }
                         },
-                        KeyCode::Esc => {
-                            editor.should_quit = true;
-                        }
                         _ => {}
                     }
                 },
