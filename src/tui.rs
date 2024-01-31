@@ -1,5 +1,6 @@
 use std::io;
 
+#[warn(unused_imports)]
 use crossterm::event::{
     EnableMouseCapture,
     DisableMouseCapture,

@@ -411,6 +411,13 @@ impl Editor{
     }
 
 
+    // NOTE: motion parsing function
+        // might have to be async for timming
+    pub fn parse(&mut self) -> Result<()> {
+        self.motion.clear();
+        Ok(())
+    }
+
     // NOTE: saving functions
 
     pub fn save(&mut self) {

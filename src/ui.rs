@@ -202,7 +202,8 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                     editor.move_end_of_line();
                                 },
                                 val => {
-                                    editor.motion.push(val)
+                                    editor.motion.push(val);
+                                    let _res = editor.parse().unwrap();
                                 }
                             }
                         },
