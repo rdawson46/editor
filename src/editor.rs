@@ -414,8 +414,37 @@ impl Editor{
     // NOTE: motion parsing function
         // might have to be async for timming
     pub fn parse(&mut self) -> Result<()> {
+        enum Type {
+            Com, // command
+            Num, // number
+            Mot, // motion
+        }
+
+        let commands_keys: [char; 1] = ['a'];
+        let motions_keys: [char; 1] = ['a'];
+
+        let motion = self.motion.text.clone();
+        let mut parsed: Vec<Type> = vec![];
+
+        for chr in motion.chars() {
+            if commands_keys.contains(&chr) {
+                parsed.push(Type::Com);
+            } else if motions_keys.contains(&chr) {
+                parsed.push(Type::Mot);
+            } else if chr.is_digit(10) {
+                parsed.push(Type::Num);
+            } 
+        }
+
+        let valid: Result<()>;
+
+        match parsed {
+            _ => valid = Ok(())
+        };
+
+        // only clear is parsing succeeds
         self.motion.clear();
-        Ok(())
+        valid
     }
 
     // NOTE: saving functions
