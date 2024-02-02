@@ -413,7 +413,7 @@ impl Editor{
 
     // NOTE: motion parsing function
         // might have to be async for timming
-    pub fn parse(&mut self) -> Result<()> {
+    pub fn parse(&mut self) -> Result<u32, &str> {
         enum Type {
             Com, // command
             Num, // number
@@ -436,10 +436,15 @@ impl Editor{
             } 
         }
 
-        let valid: Result<()>;
+        let valid: Result<u32, &str>;
 
-        match parsed {
-            _ => valid = Ok(())
+        // NOTE: more will need to be added
+        match parsed[..] {
+            [Type::Mot] => valid = Ok(0),
+            [Type::Num, Type::Mot] => valid = Ok(0),
+            [Type::Com, Type::Num, Type::Mot] => valid = Ok(0),
+            [Type::Num, Type::Com, Type::Mot] => valid = Ok(0),
+            _ => return Err("invalid")
         };
 
         // only clear is parsing succeeds
