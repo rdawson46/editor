@@ -115,7 +115,20 @@ impl Editor{
                 Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
             },
             Mode::Normal => {
-                Paragraph::new("-- Normal --\t\t").block(Block::default().borders(Borders::TOP))
+                // TODO: temp idea for displaying motions
+                let mut motion_str = "".to_string();
+
+                match &self.motion.number {
+                    Some(value) => motion_str.push_str(value.clone().as_str()),
+                    None => {}
+                }
+
+                match &self.motion.command {
+                    Some(value) => motion_str.push_str(value.clone().as_str()),
+                    None => {}
+                }
+
+                Paragraph::new(format!("-- Normal --      {}", motion_str) ).block(Block::default().borders(Borders::TOP))
             },
             Mode::Command => {
                 Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
