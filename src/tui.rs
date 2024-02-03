@@ -105,7 +105,7 @@ impl Tui {
                                     },
                                     crossterm::event::Event::Resize(x,y) => {
                                         _event_tx.send(Event::Resize(x, y)).unwrap();
-                                    }
+                                    },
                                     _ => {}
                                 }
                             }

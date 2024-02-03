@@ -115,7 +115,7 @@ impl Editor{
                 Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
             },
             Mode::Normal => {
-                Paragraph::new("-- Normal --").block(Block::default().borders(Borders::TOP))
+                Paragraph::new("-- Normal --\t\t").block(Block::default().borders(Borders::TOP))
             },
             Mode::Command => {
                 Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
@@ -413,43 +413,65 @@ impl Editor{
 
     // NOTE: motion parsing function
         // might have to be async for timming
+            //  could possile use channels for this
+        //  might need an action function
+        //  will probably remove returned result
     pub fn parse(&mut self) -> Result<u32, &str> {
-        enum Type {
-            Com, // command
-            Num, // number
-            Mot, // motion
-        }
-
-        let commands_keys: [char; 1] = ['a'];
-        let motions_keys: [char; 1] = ['a'];
-
-        let motion = self.motion.text.clone();
-        let mut parsed: Vec<Type> = vec![];
-
-        for chr in motion.chars() {
-            if commands_keys.contains(&chr) {
-                parsed.push(Type::Com);
-            } else if motions_keys.contains(&chr) {
-                parsed.push(Type::Mot);
-            } else if chr.is_digit(10) {
-                parsed.push(Type::Num);
-            } 
-        }
-
-        let valid: Result<u32, &str>;
-
-        // NOTE: more will need to be added
-        match parsed[..] {
-            [Type::Mot] => valid = Ok(0),
-            [Type::Num, Type::Mot] => valid = Ok(0),
-            [Type::Com, Type::Num, Type::Mot] => valid = Ok(0),
-            [Type::Num, Type::Com, Type::Mot] => valid = Ok(0),
-            _ => return Err("invalid")
+        let count = match &self.motion.number{
+            Some(value) => value.parse::<u32>().unwrap_or(0),
+            None => 1,
         };
 
-        // only clear is parsing succeeds
-        self.motion.clear();
-        valid
+        let motion = match &self.motion.motion {
+            Some(value) => value.clone(),
+            None => "".to_string(),
+        };
+
+        let _command = match &self.motion.command {
+            Some(value) => value.clone(),
+            None => "".to_string(),
+        };
+
+        for _ in 0..count {
+            // perform action then move cursor
+            self.motion_func(&motion);
+
+            match &self.mode {
+                Mode::Normal => {},
+                _ => break,
+            }
+        }
+
+        Ok(0)
+    }
+
+    pub fn motion_func(&mut self, key: &String) {
+        match key.as_str() {
+            ":" => self.change_mode(Mode::Command),
+            "j" => self.move_down(),
+            "k" => self.move_up(),
+            "h" => self.move_left(),
+            "l" => self.move_right(),
+            "i" => self.change_mode(Mode::Insert),
+            "a" => {
+                self.change_mode(Mode::Insert);
+                self.move_right();
+            },
+            "w" => self.move_next_word(),
+            "b" => self.move_back_word(),
+            "e" => self.move_end_word(),
+            "0" => self.move_begin_of_line(),
+            "$" => self.move_end_of_line(),
+            "I" => {
+                self.change_mode(Mode::Insert);
+                self.move_begin_of_line();
+            },
+            "A" => {
+                self.change_mode(Mode::Insert);
+                self.move_end_of_line();
+            },
+            _ => {}
+        }
     }
 
     // NOTE: saving functions

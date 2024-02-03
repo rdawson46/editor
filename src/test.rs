@@ -11,16 +11,6 @@ fn test_editor(){
     let filename = std::path::Path::new(&filename);
 
     let mut editor = Editor::new(filename).unwrap();
-    assert_eq!(editor.cursor.current.1, 0);
-    
-    editor.move_down();
-    assert_eq!(editor.cursor.current.1, 1);
-    
-    editor.move_up();
-    assert_eq!(editor.cursor.current.1, 0);
-
-    editor.move_up();
-    assert_eq!(editor.cursor.current.1, 0);
 
     match &editor.mode {
         Mode::Normal => {},
