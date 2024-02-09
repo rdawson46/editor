@@ -5,10 +5,10 @@ Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 This branch will feature adding a vim like command buffer
 
 ## Todo
-* later implement ptr_x for longer lines
 * improve motions UI
 * add actions, like delete, to motions
-* improve commands command 
 * improve word jumps
-* add file tree explore page
+* improve commands command
 * fix all todos and fixes in proj
+* later implement ptr_x for longer lines
+* add file tree explore page when no file added
