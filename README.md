@@ -5,7 +5,6 @@ Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 This branch will feature adding a vim like command buffer
 
 ## Todo
-* fix relative line numbers for long page scrolling
 * improve motions UI
 * add actions, like delete, to motions
 * improve word jumps

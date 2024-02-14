@@ -56,7 +56,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         }
 
         let mut i_str: String;
-        let current_line = usize::from(editor.ptr_y + editor.cursor.current.1);
+        let current_line = usize::from(editor.cursor.current.1);
 
         if current_line != i {
             if current_line > i {
@@ -66,14 +66,13 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
             }
 
         } else {
-            i_str = (i + 1).to_string();
+            i_str = (editor.ptr_y + editor.cursor.current.1 + 1).to_string();
             if i_str.len() <= 2 {
                 i_str.push(' ');
             }
         }
 
-        i_str.push('\n');
-        i_str.push('\r');
+        i_str.push_str("\n\r");
 
         for char in i_str.chars() {
             line_nums.push(char);
