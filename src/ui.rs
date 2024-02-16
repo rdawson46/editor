@@ -186,46 +186,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                     },
                                     None => {}
                                 }
-                                /*
-                                 * motions to use, made with vim macros
-                                 * [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A']
-                                match value {
-                                    ':' => editor.change_mode(Mode::Command),
-                                    'j' => editor.move_down(),
-                                    'k' => editor.move_up(),
-                                    'h' => editor.move_left(),
-                                    'l' => editor.move_right(),
-                                    'i' => editor.change_mode(Mode::Insert),
-                                    'a' => {
-                                        editor.change_mode(Mode::Insert);
-                                        editor.move_right();
-                                    },
-                                    'w' => editor.move_next_word(),
-                                    'b' => editor.move_back_word(),
-                                    'e' => editor.move_end_word(),
-                                    '0' => editor.move_begin_of_line(),
-                                    '$' => editor.move_end_of_line(),
-                                    'I' => {
-                                        editor.change_mode(Mode::Insert);
-                                        editor.move_begin_of_line();
-                                    },
-                                    'A' => {
-                                        editor.change_mode(Mode::Insert);
-                                        editor.move_end_of_line();
-                                    },
-                                    val => {
-                                        let res = editor.motion.push(val);
-
-                                        match res {
-                                            Some(_) => {
-                                                let _ = editor.parse();
-                                                editor.motion.clear();
-                                            },
-                                            None => {}
-                                        }
-                                    }
-                                }
-                                */
                             }
                         },
                         _ => {}
