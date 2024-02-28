@@ -3,6 +3,7 @@ pub enum CommandKey {
     Quit,
     Line(usize),
     SaveAndQuit,
+    Logger,
     History
 }
 
@@ -31,6 +32,7 @@ impl Command {
                 "q" => Some(CommandKey::Quit),
                 "w" => Some(CommandKey::Save),
                 "history" => Some(CommandKey::History),
+                "logger" => Some(CommandKey::Logger),
                 _ => None
             };
         }

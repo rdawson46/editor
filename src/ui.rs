@@ -150,6 +150,18 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                             editor.should_quit = true;
                                         },
                                         CommandKey::History => todo!(),
+                                        CommandKey::Logger => {
+                                            // TODO: finish this up
+
+                                            let output = match &editor.logger {
+                                                Some(socket) => {
+                                                    let addr = socket.local_addr().unwrap().to_string();
+                                                    format!("Connected to {}", addr)
+                                                },
+                                                None => "Not Connected".to_string()
+                                            };
+                                            editor.message = Some(output);
+                                        },
                                     }
                                 },
                                 None => {}

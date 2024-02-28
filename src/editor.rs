@@ -22,6 +22,7 @@ use crate::word::{
 };
 use crate::command::Command;
 use crate::motion::MotionBuffer;
+use std::net::{UdpSocket, SocketAddr};
 
 
 pub enum Mode{
@@ -62,7 +63,9 @@ pub struct Editor{
     pub cushion: u8,
     pub ptr_y: u16,
     pub ptr_x: u16,
-    pub size: (u16, u16)
+    pub size: (u16, u16),
+    pub logger: Option<UdpSocket>,
+    pub message: Option<String>
 }
 
 impl Editor{
@@ -90,18 +93,49 @@ impl Editor{
             
             let lines = Lines { lines };
 
-            return Ok(Editor {
-                cursor: Cursor::new(),
-                lines, file: path.to_owned(),
-                mode: Mode::Normal,
-                command: Command::new(),
-                motion: MotionBuffer::new(),
-                should_quit: false,
-                cushion: 0,
-                ptr_y: 0,
-                ptr_x: 0,
-                size: (0, 0)
-            });
+            // port address for logger
+            let port = match std::env::args().nth(2) {
+                Some(value) => {
+                    value
+                },
+                None => "".to_string()
+            };
+
+            if port == "" {
+                return Ok(Editor {
+                    cursor: Cursor::new(),
+                    lines, file: path.to_owned(),
+                    mode: Mode::Normal,
+                    command: Command::new(),
+                    motion: MotionBuffer::new(),
+                    should_quit: false,
+                    cushion: 0,
+                    ptr_y: 0,
+                    ptr_x: 0,
+                    size: (0, 0),
+                    logger: None,
+                    message: None
+                });
+            } else {
+                //  TODO: connect to udp socket here and save socket to logger
+
+                let socket = UdpSocket::bind(format!("127.0.0.1:{}", port)).unwrap();
+
+                return Ok(Editor {
+                    cursor: Cursor::new(),
+                    lines, file: path.to_owned(),
+                    mode: Mode::Normal,
+                    command: Command::new(),
+                    motion: MotionBuffer::new(),
+                    should_quit: false,
+                    cushion: 0,
+                    ptr_y: 0,
+                    ptr_x: 0,
+                    size: (0, 0),
+                    logger: Some(socket),
+                    message: None
+                });
+            }
         }
 
         panic!("No file passed");
@@ -127,8 +161,15 @@ impl Editor{
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
                 }
+                
+                let status = match &self.message {
+                    Some(value) => {
+                        value.to_owned()
+                    },
+                    None => "-- Normal --".to_string()
+                };
 
-                Paragraph::new(format!("-- Normal --      {}", motion_str) ).block(Block::default().borders(Borders::TOP))
+                Paragraph::new(format!("{}      {}", status, motion_str) ).block(Block::default().borders(Borders::TOP))
             },
             Mode::Command => {
                 Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
