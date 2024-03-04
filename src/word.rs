@@ -62,3 +62,28 @@ pub fn find_word_start_backward(line: &String, start_col: usize) -> Option<usize
     }
     (cur != CharKind::Space).then(|| 0)
 }
+
+pub fn find_next_occur_forward (line: &String, start_col: usize, target: char) -> Option<usize> {
+    let it = line.chars().enumerate().skip(start_col);
+    for (col, c) in it {
+        if c == target {
+            return Some(col);
+        }
+    }
+    None
+}
+
+pub fn find_next_occur_backward (line: &String, start_col: usize, target: char) -> Option<usize> {
+    let idx = line
+        .char_indices()
+        .nth(start_col)
+        .map(|(i, _)| i)
+        .unwrap_or(line.len());
+    let it = line[..idx].chars().rev().enumerate();
+    for (col, c) in it {
+        if c == target {
+            return Some(col);
+        }
+    }
+    None
+}

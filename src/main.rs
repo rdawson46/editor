@@ -7,6 +7,7 @@ mod command;
 mod ui;
 mod tui;
 mod word;
+mod buffer;
 use crate::editor::{
     Editor,
     Mode

@@ -15,11 +15,12 @@ use ratatui::{
     Frame,
 };
 
-// TODO: replace editor.ptr with y_ptr and x_ptr
-    // for horizontal scrolling
+// TODO: replace editor.ptr with y_ptr and x_ptr for horizontal scrolling
 
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
+    // wrapper_layout[0] is for the text and line numbers
+    // wrapper_layout[1] is for the command view
     let wrapper_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints(vec![
@@ -86,7 +87,25 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         text_string.push('\n');
     }
 
-    f.render_widget(editor.mode_display(), wrapper_layout[1]);
+    let (status, motion) = editor.mode_display();
+
+    match motion {
+        Some(motion) => {
+            let status_motion = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints(vec![
+                             Constraint::Percentage(50),
+                             Constraint::Percentage(50)
+                ])
+                .split(wrapper_layout[1]);
+
+            f.render_widget(status, status_motion[0]);
+            f.render_widget(motion, status_motion[1]);
+        },
+        None => {
+            f.render_widget(status, wrapper_layout[1]);
+        }
+    }
 
     f.render_widget(Paragraph::new(line_nums)
                     .alignment(ratatui::layout::Alignment::Right)
@@ -101,8 +120,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
 
 
-//  TODO: fix how modes switch
-//  TODO: move cursor management to editor
+//  TODO: fix how modes switch, ???
 pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
     match event {
         Event::Init => {},

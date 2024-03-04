@@ -1,20 +1,12 @@
 use color_eyre::eyre::Result;
 use std::path::{PathBuf, Path};
 use std::fs::File;
-use std::io::{
-    BufReader,
-    BufRead,
-};
+use std::io::{BufReader, BufRead};
 use std::usize;
 use crossterm::{cursor, execute};
-use crossterm::event::{
-    KeyEvent,
-    KeyCode,
-    KeyModifiers
-};
-use ratatui::widgets::{
-    Paragraph, Borders, Block
-};
+use crossterm::event::{ KeyEvent, KeyCode, KeyModifiers};
+use ratatui::prelude::Alignment;
+use ratatui::widgets::{Paragraph, Borders, Block};
 use crate::word::{
     find_word_end_forward,
     find_word_start_forward,
@@ -22,7 +14,7 @@ use crate::word::{
 };
 use crate::command::Command;
 use crate::motion::MotionBuffer;
-use std::net::{UdpSocket, SocketAddr};
+use std::net::UdpSocket;
 
 
 pub enum Mode{
@@ -70,9 +62,6 @@ pub struct Editor{
 
 impl Editor{
     pub fn new(path: &Path)-> Result<Editor> {
-        // open file passed
-        // load file to memory
-
         let file = File::open(&path);
 
         if let Ok(file) = file {
@@ -101,7 +90,7 @@ impl Editor{
                 None => "".to_string()
             };
 
-            if port == "" {
+            if port == "" || port == "8000"{
                 return Ok(Editor {
                     cursor: Cursor::new(),
                     lines, file: path.to_owned(),
@@ -118,8 +107,8 @@ impl Editor{
                 });
             } else {
                 //  TODO: connect to udp socket here and save socket to logger
-
-                let socket = UdpSocket::bind(format!("127.0.0.1:{}", port)).unwrap();
+                let socket = UdpSocket::bind("127.0.0.1:8000").unwrap();
+                socket.connect(format!("127.0.0.1:{}", port)).unwrap();
 
                 return Ok(Editor {
                     cursor: Cursor::new(),
@@ -143,10 +132,10 @@ impl Editor{
 
     // NOTE: display functions
 
-    pub fn mode_display(&self) -> Paragraph {
+    pub fn mode_display(&self) -> (Paragraph, Option<Paragraph>) {
         match &self.mode {
             Mode::Insert => {
-                Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
+                (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
             },
             Mode::Normal => {
                 // TODO: temp idea for displaying motions
@@ -169,10 +158,12 @@ impl Editor{
                     None => "-- Normal --".to_string()
                 };
 
-                Paragraph::new(format!("{}      {}", status, motion_str) ).block(Block::default().borders(Borders::TOP))
+                let status = Paragraph::new(format!("{}", status) ).block(Block::default().borders(Borders::TOP));
+                let motion = Paragraph::new(format!("{}", motion_str)).block(Block::default().borders(Borders::TOP)).alignment(Alignment::Center);
+                (status, Some(motion))
             },
             Mode::Command => {
-                Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
+                (Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP)), None)
             }
         }
     }

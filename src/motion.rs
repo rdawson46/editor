@@ -2,6 +2,7 @@
     //  could possile use channels for this
 pub struct MotionBuffer{
     pub command: Option<String>,
+    pub command_arg: Option<String>,
     pub number: Option<String>,
     pub motion: Option<String>,
     // will need these later? maybe in editor
@@ -12,14 +13,16 @@ pub struct MotionBuffer{
 
 impl MotionBuffer {
     pub fn new() -> Self{
-        MotionBuffer { command: None, number: None, motion: None }
+        MotionBuffer { command: None, command_arg: None, number: None, motion: None }
     }
 
     pub fn push(&mut self, chr: char) -> Option<u32> {
         // IDEA: trigger parsing when motion is hit
             // should I mark mode changers (i) as a motion for simplicity
+
+        // TODO: determine how to use command_arg for f/t search
         let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A'];
-        let commands = ['d', 's'];
+        let commands = ['d', 's', 'f'];
 
         if chr.is_digit(10) {
             // self.number.push(chr);
