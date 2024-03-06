@@ -20,7 +20,7 @@ impl MotionBuffer {
         // IDEA: trigger parsing when motion is hit
             // should I mark mode changers (i) as a motion for simplicity
 
-        // TODO: determine how to use command_arg for f/t search
+        // TODO: determine how to use command_arg for f/t search, and o/O
         let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A'];
         let commands = ['d', 's', 'f'];
 

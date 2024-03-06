@@ -19,6 +19,7 @@ impl CharKind {
     }
 }
 
+// TODO: fix this functions
 pub fn find_word_start_forward(line: &String, start_col: usize) -> Option<usize> {
     let mut it = line.chars().enumerate().skip(start_col);
     let mut prev = CharKind::new(it.next()?.1);

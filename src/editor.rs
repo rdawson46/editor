@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use std::path::{PathBuf, Path};
+use std::path::Path;
 use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::usize;
@@ -15,6 +15,7 @@ use crate::word::{
 use crate::command::Command;
 use crate::motion::MotionBuffer;
 use std::net::UdpSocket;
+use crate::buffer::Buffer;
 
 
 pub enum Mode{
@@ -29,7 +30,7 @@ pub struct Cursor{
 }
 
 impl Cursor{
-    fn new() -> Cursor{
+    pub fn new() -> Cursor{
         Cursor { current: (0,0), possible: (0,0) }
     }
 }
@@ -45,23 +46,18 @@ pub struct Lines{
 }
 
 // TODO: fix what happens on resize
-pub struct Editor{
-    pub cursor: Cursor,
-    pub lines: Lines,
-    pub file: PathBuf,
+pub struct Editor<'a>{
+    pub buffer: Buffer<'a>,
     pub command: Command,
     pub motion: MotionBuffer,
     pub mode: Mode,
     pub should_quit: bool,
-    pub cushion: u8,
-    pub ptr_y: u16,
-    pub ptr_x: u16,
     pub size: (u16, u16),
     pub logger: Option<UdpSocket>,
     pub message: Option<String>
 }
 
-impl Editor{
+impl Editor<'_> {
     pub fn new(path: &Path)-> Result<Editor> {
         let file = File::open(&path);
 

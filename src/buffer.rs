@@ -2,21 +2,12 @@ use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
 use std::fs::{File, read_dir};
 use std::io::{BufReader, BufRead};
+use crate::editor::{Cursor, Lines, Line};
 
 enum BufferType {
     Empty,
     Directory,
     File
-}
-
-pub struct Line{
-    pub text: Box<String>,
-    pub length: u16
-}
-
-// fields will be added later
-pub struct Lines{
-    pub lines: Vec<Line>
 }
 
 pub struct Buffer<'a> {
@@ -25,6 +16,8 @@ pub struct Buffer<'a> {
     pub lines: Lines,
     pub ptr_y: u16,
     pub ptr_x: u16,
+    pub cursor: Cursor,
+    pub file: Option<PathBuf>
 }
 
 impl Buffer<'_> {
@@ -88,6 +81,7 @@ impl Buffer<'_> {
             lines,
             ptr_x: 0,
             ptr_y: 0,
+            cursor: Cursor::new()
         });
     }
 }
