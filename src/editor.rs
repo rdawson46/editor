@@ -44,6 +44,7 @@ pub struct Lines{
     pub lines: Vec<Line>
 }
 
+// TODO: fix what happens on resize
 pub struct Editor{
     pub cursor: Cursor,
     pub lines: Lines,
