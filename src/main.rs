@@ -46,13 +46,13 @@ async fn run() -> Result<()> {
     loop {
         tui.terminal.show_cursor()?;
         
-        match &editor.mode {
+        match &editor.buffer.mode {
             Mode::Command => {
                 // TODO: set cursor to command line
                 tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
             },
             _ => {
-                tui.terminal.set_cursor(editor.cursor.current.0 + X_OFFSET, editor.cursor.current.1)?;
+                tui.terminal.set_cursor(editor.buffer.cursor.current.0 + X_OFFSET, editor.buffer.cursor.current.1)?;
             }
         };
 

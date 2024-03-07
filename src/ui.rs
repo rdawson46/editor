@@ -1,6 +1,5 @@
 use std::rc::Rc;
 use std::usize;
-
 use crate::Event;
 use crate::Tui;
 use crate::X_OFFSET;
@@ -16,7 +15,7 @@ use ratatui::{
 };
 
 // TODO: replace editor.ptr with y_ptr and x_ptr for horizontal scrolling
-
+// fix for buffer types
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     // wrapper_layout[0] is for the text and line numbers
@@ -51,13 +50,13 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let mut line_nums = "".to_string();
     let mut text_string = "".to_string();
 
-    for (i, line) in editor.lines.lines.iter().skip(editor.ptr_y.into()).enumerate() {
-        if i > usize::from(editor.ptr_y + editor.size.1) {
+    for (i, line) in editor.buffer.lines.lines.iter().skip(editor.buffer.ptr_y.into()).enumerate() {
+        if i > usize::from(editor.buffer.ptr_y + editor.size.1) {
             break;
         }
 
         let mut i_str: String;
-        let current_line = usize::from(editor.cursor.current.1);
+        let current_line = usize::from(editor.buffer.cursor.current.1);
 
         if current_line != i {
             if current_line > i {
@@ -67,7 +66,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
             }
 
         } else {
-            i_str = (editor.ptr_y + editor.cursor.current.1 + 1).to_string();
+            i_str = (editor.buffer.ptr_y + editor.buffer.cursor.current.1 + 1).to_string();
             if i_str.len() <= 2 {
                 i_str.push(' ');
             }
@@ -135,9 +134,11 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Key(key) => {
 
             // TODO: add movable cursor with arrow keys
-            match editor.mode {
+            match editor.buffer.mode {
                 Mode::Insert => {
+                    // TODO: fix for directory
                     editor.insert_key(key);
+
                 },
 
                 Mode::Command => {

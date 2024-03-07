@@ -1,17 +1,9 @@
 use color_eyre::eyre::Result;
 use std::path::Path;
-use std::fs::File;
-use std::io::{BufReader, BufRead};
 use std::usize;
-use crossterm::{cursor, execute};
-use crossterm::event::{ KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::KeyEvent;
 use ratatui::prelude::Alignment;
 use ratatui::widgets::{Paragraph, Borders, Block};
-use crate::word::{
-    find_word_end_forward,
-    find_word_start_forward,
-    find_word_start_backward
-};
 use crate::command::Command;
 use crate::motion::MotionBuffer;
 use std::net::UdpSocket;
@@ -46,91 +38,62 @@ pub struct Lines{
 }
 
 // TODO: fix what happens on resize
-pub struct Editor<'a>{
-    pub buffer: Buffer<'a>,
+pub struct Editor {
+    pub buffer: Buffer,
     pub command: Command,
     pub motion: MotionBuffer,
-    pub mode: Mode,
     pub should_quit: bool,
     pub size: (u16, u16),
     pub logger: Option<UdpSocket>,
     pub message: Option<String>
 }
 
-impl Editor<'_> {
+impl Editor {
     pub fn new(path: &Path)-> Result<Editor> {
-        let file = File::open(&path);
+        let buf = Buffer::new(path)?;
+        // port address for logger
+        let port = match std::env::args().nth(2) {
+            Some(value) => {
+                value
+            },
+            None => "".to_string()
+        };
 
-        if let Ok(file) = file {
-            let reader = BufReader::new(file);
+        if port == "" || port == "8000"{
+            return Ok(Editor {
+                buffer: buf,
+                command: Command::new(),
+                motion: MotionBuffer::new(),
+                should_quit: false,
+                size: (0, 0),
+                logger: None,
+                message: None
+            });
+        } else {
+            //  TODO: connect to udp socket here and save socket to logger
+            let socket = UdpSocket::bind("127.0.0.1:8000").unwrap();
+            socket.connect(format!("127.0.0.1:{}", port)).unwrap();
 
-            let mut lines: Vec<Line> = vec![];
-
-            for line in reader.lines() {
-                match line {
-                    Ok(text) => {
-                        let length: u16 = text.len().try_into().unwrap();
-                        let boxed_text = Box::new(text);
-                        lines.push(Line { text: boxed_text, length });
-                    }
-                    Err(_) => {}
-                }
-            }
-            
-            let lines = Lines { lines };
-
-            // port address for logger
-            let port = match std::env::args().nth(2) {
-                Some(value) => {
-                    value
-                },
-                None => "".to_string()
-            };
-
-            if port == "" || port == "8000"{
-                return Ok(Editor {
-                    cursor: Cursor::new(),
-                    lines, file: path.to_owned(),
-                    mode: Mode::Normal,
-                    command: Command::new(),
-                    motion: MotionBuffer::new(),
-                    should_quit: false,
-                    cushion: 0,
-                    ptr_y: 0,
-                    ptr_x: 0,
-                    size: (0, 0),
-                    logger: None,
-                    message: None
-                });
-            } else {
-                //  TODO: connect to udp socket here and save socket to logger
-                let socket = UdpSocket::bind("127.0.0.1:8000").unwrap();
-                socket.connect(format!("127.0.0.1:{}", port)).unwrap();
-
-                return Ok(Editor {
-                    cursor: Cursor::new(),
-                    lines, file: path.to_owned(),
-                    mode: Mode::Normal,
-                    command: Command::new(),
-                    motion: MotionBuffer::new(),
-                    should_quit: false,
-                    cushion: 0,
-                    ptr_y: 0,
-                    ptr_x: 0,
-                    size: (0, 0),
-                    logger: Some(socket),
-                    message: None
-                });
-            }
+            return Ok(Editor {
+                buffer: buf,
+                command: Command::new(),
+                motion: MotionBuffer::new(),
+                should_quit: false,
+                size: (0, 0),
+                logger: Some(socket),
+                message: None
+            });
         }
+    }
 
-        panic!("No file passed");
+    pub fn change_mode(&mut self, mode: Mode) {
+        self.buffer.change_mode(mode);
     }
 
     // NOTE: display functions
 
     pub fn mode_display(&self) -> (Paragraph, Option<Paragraph>) {
-        match &self.mode {
+        match &self.buffer.mode {
             Mode::Insert => {
                 (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
             },
@@ -165,290 +128,19 @@ impl Editor<'_> {
         }
     }
 
-
-    // NOTE: mode change functions
-
-    pub fn change_mode(&mut self, mode: Mode) {
-        match mode {
-            Mode::Insert => {
-                execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
-                self.mode = mode;
-            },
-            Mode::Command => {
-                self.mode = mode;
-            },
-            Mode::Normal => {
-                // recalc cursor pos
-                // get current pos, compare to line length
-
-                let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-                
-                if line_len == 0 {
-                    self.cursor.current.0 = 0;
-                } else {
-                    let x = std::cmp::min(self.cursor.current.0, line_len - 1);
-                    self.cursor.current.0 = x;
-                    self.cursor.possible.0 = x;
-                };
-
-                execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
-                self.mode = mode;
-            },
-        }
-    }
-
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Char(value) => {
-                if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                    self.change_mode(Mode::Normal);
-                } else {
-                    // get current line
-                    let line_index = usize::from(self.ptr_y + self.cursor.current.1);
-
-                    let current_line = &mut self.lines.lines[line_index];
-                    let text = &mut current_line.text;
-
-                    let text_index = usize::from(self.cursor.current.0);
-
-                    if current_line.length == 0 {
-                        text.push(value);
-                    } else {
-                        text.insert(text_index, value);
-                    }
-
-                    current_line.length += 1;
-                    self.move_right();
-                }
-            },
-            KeyCode::Enter => {
-                let curr_line = usize::from(self.ptr_y + self.cursor.current.1);
-
-                let curr_index = usize::from(self.cursor.current.0);
-
-                let new_str = self.lines.lines[curr_line].text.split_off(curr_index);
-
-                let len: u16 = new_str.len() as u16;
-
-                let new_line: Line = Line { text: Box::new(new_str), length: len };
-
-                self.lines.lines.insert(curr_line + 1, new_line);
-                self.move_down();
-                self.cursor.current.0 = 0;
-                self.cursor.possible.0 = 0;
-            },
-            KeyCode::Backspace => {
-                let line_index = usize::from(self.ptr_y + self.cursor.current.1);
-
-                let current_line = &mut self.lines.lines[line_index];
-                let text_index = usize::from(self.cursor.current.0);
-
-                if current_line.length != 0 && text_index > 0 {
-                    current_line.length -= 1;
-                    let text = &mut current_line.text;
-                    text.remove(text_index.checked_sub(1).unwrap_or(0));
-                    self.move_left();
-                } else{
-                    if line_index == 0 {
-                        return;
-                    }
-
-                    self.move_up();
-                    self.move_end_of_line();
-
-                    let current_line = &self.lines.lines[line_index];
-                    let text = current_line.text.clone();
-                    self.lines.lines.remove(line_index);
-                    let line_above = self.lines.lines.get_mut(line_index-1).unwrap();
-
-                    line_above.text = Box::new(format!("{}{}", *line_above.text, &text));
-                    line_above.length = line_above.text.len().try_into().unwrap();
-                }
-            },
-            KeyCode::Tab => {},
-            KeyCode::Esc => {
-                self.change_mode(Mode::Normal);
-            },
-            _ => {}
-        }
+        // NOTE: temp
+        self.buffer.insert_key_file(key, self.size);
     }
-
-    // NOTE: cursor movement methods
-
-    pub fn move_down(&mut self) {
-        // next logical y
-        let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
-
-        if y > self.size.1.checked_sub(1).unwrap_or(0) {
-            if usize::from(self.size.1 + self.ptr_y) < self.lines.lines.len() {
-                self.ptr_y += 1;
-            }
-            return;
-        }
-
-        // TODO: remove uselss bits
-
-        // max lines in file
-        let line_nums = self.lines.lines.len() - 1;
-
-        
-        // NOTE: this line will be useless with pointer movement
-        let cap = std::cmp::min(line_nums, usize::from(self.ptr_y + self.size.1 - 1));
-        let y = std::cmp::min(y, cap.try_into().unwrap());
-
-        self.cursor.current.1 = y;
-
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-
-
-        if line_len == 0 {
-            self.cursor.current.0 = 0;
-        } else {
-            let x = std::cmp::max(self.cursor.current.0, self.cursor.possible.0);
-            let x = std::cmp::min(x, line_len - 1);
-            self.cursor.current.0 = x;
-        }
-    }
-
-    pub fn move_up(&mut self) {
-        if self.cursor.current.1 == 0 && self.ptr_y != 0 {
-            self.ptr_y -= 1;
-            return;
-        }
-
-        self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
-
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-
-        if line_len == 0 {
-            self.cursor.current.0 = 0;
-        } else {
-            let x = std::cmp::max(self.cursor.current.0, self.cursor.possible.0);
-            let x = std::cmp::min(x, line_len - 1);
-            self.cursor.current.0 = x;
-        }
-    }
-
-    
-
-    // TODO: cursor movement when in command mode
-    pub fn move_right(&mut self) {
-        // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-        if line_len == 0 {
-            self.cursor.current.0 = 0;
-        } else{
-            match &self.mode {
-                Mode::Normal => {
-                    let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-                    let x = std::cmp::min(x, line_len - 1);
-
-                    self.cursor.current.0 = x;
-                    self.cursor.possible.0 = x;
-                },
-                Mode::Insert => {
-                    let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-                    let x = std::cmp::min(x, line_len);
-
-                    self.cursor.current.0 = x;
-                    self.cursor.possible.0 = x;
-                },
-                Mode::Command => {
-                    todo!()
-                }
-            }
-        }
-    }
-
-    pub fn move_left(&mut self) {
-        let x = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0 + self.ptr_y);
-        self.cursor.current.0 = x;
-        self.cursor.possible.0 = x;
-    }
-
-    pub fn move_end_of_line(&mut self) {
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-        if line_len == 0 {
-            self.cursor.current.0 = 0;
-            return;
-        }
-
-        match &self.mode {
-            Mode::Normal => {
-                self.cursor.current.0 = line_len - 1;
-                self.cursor.possible.0 = line_len - 1;
-            },
-            Mode::Insert => {
-                self.cursor.current.0 = line_len;
-                self.cursor.possible.0 = line_len;
-            },
-            Mode::Command => {}
-        }
-    }
-
-    // TODO: implemet this function
-    pub fn move_begin_of_line(&mut self){
-        self.cursor.current.0 = 0;
-        self.cursor.possible.0 = 0;
-    }
-
 
     // NOTE: word movements
-
-    // TODO: make work with going to next line
-    pub fn move_next_word(&mut self) {
-        // conversion
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
-
-        // get start col
-        let start_col = usize::from(self.cursor.current.0);
-
-        // find col
-        let next = find_word_start_forward(line, start_col);
-
-        // move cursor
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
-        }
-    }
-
-    pub fn move_end_word(&mut self) {
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
-        let start_col = usize::from(self.cursor.current.0);
-        let next = find_word_end_forward(line, start_col);
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
-        }
-    }
-
-    pub fn move_back_word(&mut self) {
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
-        let start_col = usize::from(self.cursor.current.0);
-        let next = find_word_start_backward(line, start_col);
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
-        }
-    }
-
     pub fn go_to_line(&mut self, index: usize) {
         let index = index - 1;
-        if index < self.lines.lines.len() {
-            self.cursor.current.0 = index as u16;
-            self.cursor.current.1 = index as u16;
+        if index < self.buffer.lines.lines.len() {
+            self.buffer.cursor.current.0 = index as u16;
+            self.buffer.cursor.current.1 = index as u16;
         } 
     }
 
@@ -478,7 +170,7 @@ impl Editor<'_> {
             // perform action then move cursor
             self.motion_func(&motion);
 
-            match &self.mode {
+            match &self.buffer.mode {
                 Mode::Normal => {},
                 _ => break,
             }
@@ -489,28 +181,28 @@ impl Editor<'_> {
 
     pub fn motion_func(&mut self, key: &String) {
         match key.as_str() {
-            ":" => self.change_mode(Mode::Command),
-            "j" => self.move_down(),
-            "k" => self.move_up(),
-            "h" => self.move_left(),
-            "l" => self.move_right(),
-            "i" => self.change_mode(Mode::Insert),
+            ":" => self.buffer.change_mode(Mode::Command),
+            "j" => self.buffer.move_down(self.size),
+            "k" => self.buffer.move_up(),
+            "h" => self.buffer.move_left(),
+            "l" => self.buffer.move_right(),
+            "i" => self.buffer.change_mode(Mode::Insert),
             "a" => {
-                self.change_mode(Mode::Insert);
-                self.move_right();
+                self.buffer.change_mode(Mode::Insert);
+                self.buffer.move_right();
             },
-            "w" => self.move_next_word(),
-            "b" => self.move_back_word(),
-            "e" => self.move_end_word(),
-            "0" => self.move_begin_of_line(),
-            "$" => self.move_end_of_line(),
+            "w" => self.buffer.move_next_word(),
+            "b" => self.buffer.move_back_word(),
+            "e" => self.buffer.move_end_word(),
+            "0" => self.buffer.move_begin_of_line(),
+            "$" => self.buffer.move_end_of_line(),
             "I" => {
-                self.change_mode(Mode::Insert);
-                self.move_begin_of_line();
+                self.buffer.change_mode(Mode::Insert);
+                self.buffer.move_begin_of_line();
             },
             "A" => {
-                self.change_mode(Mode::Insert);
-                self.move_end_of_line();
+                self.buffer.change_mode(Mode::Insert);
+                self.buffer.move_end_of_line();
             },
             _ => {}
         }
@@ -518,22 +210,28 @@ impl Editor<'_> {
 
     // NOTE: saving functions
 
+
+    // BUG: most likely definetly won't work
     pub fn save(&mut self) {
          // NOTE: too much extra memory
 
         let mut total_string = "".to_string();
 
-        for line in self.lines.lines.iter() {
+        for line in self.buffer.lines.lines.iter() {
             total_string.push_str(&line.text);
 
             total_string.push('\n');
         }
 
-        let status = std::fs::write(&self.file, total_string.as_bytes());
+        if let Some(file) = &self.buffer.file {
+            let status = std::fs::write(file, total_string.as_bytes());
 
-        match status {
-            Ok(_) => {},
-            Err(_) => panic!("writing to file didn't work"),
+            match status {
+                Ok(_) => {},
+                Err(_) => panic!("writing to file didn't work"),
+            }
+        } else {
+            return;
         }
     }
 }

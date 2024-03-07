@@ -5,9 +5,6 @@ pub struct MotionBuffer{
     pub command_arg: Option<String>,
     pub number: Option<String>,
     pub motion: Option<String>,
-    // will need these later? maybe in editor
-    // motions: [char],
-    // commands: [char],
 }
 
 
