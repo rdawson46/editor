@@ -30,7 +30,7 @@ use crossterm::terminal::{
 };
 
 // combining the terminal and event
-#[warn(dead_code)]
+// TODO: add these events
 #[derive(Clone, Debug)]
 pub enum Event{
     Init,

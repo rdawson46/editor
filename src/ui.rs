@@ -175,7 +175,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                             let output = match &editor.logger {
                                                 Some(socket) => {
                                                     let addr = socket.local_addr().unwrap().to_string();
-                                                    format!("Connected to {}", addr)
+                                                    format!("Binded to {}", addr)
                                                 },
                                                 None => "Not Connected".to_string()
                                             };

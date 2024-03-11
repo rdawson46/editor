@@ -104,8 +104,13 @@ impl Buffer {
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
-                execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
-                self.mode = mode;
+                match &self.b_type {
+                    BufferType::Directory => {},
+                    _ => {
+                        execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
+                        self.mode = mode;
+                    }
+                }
             },
             Mode::Command => {
                 self.mode = mode;
@@ -131,8 +136,7 @@ impl Buffer {
     }
 
     // functions for handling inputs for different types
-    #[warn(dead_code)]
-    pub fn insert_key_dir(&mut self, key: KeyEvent) {
+    pub fn insert_key_dir(&mut self, _key: KeyEvent) {
 
     }
 
@@ -372,5 +376,13 @@ impl Buffer {
             },
             None => {}
         }
+    }
+
+    pub fn new_line_above(&mut self) {
+
+    }
+
+    pub fn new_line_below(&mut self) {
+
     }
 }

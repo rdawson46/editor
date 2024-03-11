@@ -7,8 +7,7 @@ use ratatui::widgets::{Paragraph, Borders, Block};
 use crate::command::Command;
 use crate::motion::MotionBuffer;
 use std::net::UdpSocket;
-use crate::buffer::Buffer;
-
+use crate::buffer::{Buffer, BufferType};
 
 pub enum Mode{
     Insert, 
@@ -131,11 +130,19 @@ impl Editor {
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
-        // NOTE: temp
-        self.buffer.insert_key_file(key, self.size);
+        match &self.buffer.b_type {
+            BufferType::Directory => {
+                self.buffer.insert_key_dir(key);
+            },
+            _ => {
+                self.buffer.insert_key_file(key, self.size);
+            }
+        }
     }
 
     // NOTE: word movements
+
+    // TODO: needs to recalculate the viewpoint
     pub fn go_to_line(&mut self, index: usize) {
         let index = index - 1;
         if index < self.buffer.lines.lines.len() {
@@ -190,6 +197,12 @@ impl Editor {
             "a" => {
                 self.buffer.change_mode(Mode::Insert);
                 self.buffer.move_right();
+            },
+            "O" => {
+                self.buffer.new_line_above();
+            },
+            "o" => {
+                self.buffer.new_line_below();
             },
             "w" => self.buffer.move_next_word(),
             "b" => self.buffer.move_back_word(),
