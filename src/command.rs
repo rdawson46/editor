@@ -4,6 +4,7 @@ pub enum CommandKey {
     Line(usize),
     SaveAndQuit,
     Logger,
+    Send(String),
     History
 }
 
@@ -20,19 +21,26 @@ impl Command {
 
     pub fn confirm(&mut self) -> Option<CommandKey>{
         let command = self.text.clone();
-        self.text = String::new();
+        self.text.clear();
 
         let ck: Option<CommandKey>;
 
         if let Ok(number) = command.parse::<usize>() {
             ck = Some(CommandKey::Line(number));
         } else {
-            ck = match command.as_str() {
+            // TODO: parse commands to allow for args to be passed
+            let args: Vec<&str> = command.split(' ').collect();
+            //ck = match command.as_str() {
+            ck = match *args.get(0).expect("") {
                 "wq" | "x" => Some(CommandKey::SaveAndQuit),
                 "q" => Some(CommandKey::Quit),
                 "w" => Some(CommandKey::Save),
                 "history" => Some(CommandKey::History),
                 "logger" => Some(CommandKey::Logger),
+                "send" => {
+                    let mes = args[1..].join(" ");
+                    Some(CommandKey::Send(mes.to_string()))
+                },
                 _ => None
             };
         }

@@ -11,6 +11,7 @@ use crate::word::{
     find_word_start_backward
 };
 
+#[derive(PartialEq)]
 pub enum BufferType {
     Empty,
     Directory,
@@ -379,10 +380,44 @@ impl Buffer {
     }
 
     pub fn new_line_above(&mut self) {
-
+        let current = self.ptr_y + self.cursor.current.1;
+        // current = current.checked_sub(1).unwrap_or(0);
+        let new_line = Line { text: Box::new("".to_string()), length: 0 };
+        self.lines.lines.insert(current.into(), new_line);
+        self.change_mode(Mode::Insert);
     }
 
-    pub fn new_line_below(&mut self) {
+    pub fn new_line_below(&mut self, size: (u16, u16)) {
+        let mut current = self.ptr_y + self.cursor.current.1;
+        current = current.checked_add(1).unwrap_or(u16::MAX);
+        let new_line = Line { text: Box::new("".to_string()), length: 0 };
+        self.lines.lines.insert(current.into(), new_line);
+        self.move_down(size);
+        self.change_mode(Mode::Insert);
+    }
 
+    pub fn save(&self) {
+        if self.b_type == BufferType::File {
+            let mut total_string = "".to_string();
+
+            for line in self.lines.lines.iter() {
+                total_string.push_str(&line.text);
+
+                total_string.push('\n');
+            }
+
+            if let Some(file) = &self.file {
+                let status = std::fs::write(file, total_string.as_bytes());
+
+                match status {
+                    Ok(_) => {},
+                    Err(_) => panic!("writing to file didn't work"),
+                }
+            } else {
+                return;
+            }
+        } else {
+            // return warning to be displayed
+        }
     }
 }

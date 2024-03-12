@@ -138,7 +138,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                 Mode::Insert => {
                     // TODO: fix for directory
                     editor.insert_key(key);
-
                 },
 
                 Mode::Command => {
@@ -181,6 +180,14 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                             };
                                             editor.message = Some(output);
                                         },
+                                        CommandKey::Send(message) => {
+                                            match &editor.logger {
+                                                Some(socket) => {
+                                                    let _ = socket.send(message.as_bytes());
+                                                },
+                                                None => {}
+                                            }
+                                        }
                                     }
                                 },
                                 None => {}

@@ -1,5 +1,6 @@
 // once motion is pressed, perform
     //  could possile use channels for this
+// TODO: figure how to do leader
 pub struct MotionBuffer{
     pub command: Option<String>,
     pub command_arg: Option<String>,
@@ -18,7 +19,7 @@ impl MotionBuffer {
             // should I mark mode changers (i) as a motion for simplicity
 
         // TODO: determine how to use command_arg for f/t search, and o/O
-        let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A'];
+        let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
         let commands = ['d', 's', 'f'];
 
         if chr.is_digit(10) {

@@ -43,7 +43,7 @@ pub struct Editor {
     pub motion: MotionBuffer,
     pub should_quit: bool,
     pub size: (u16, u16),
-    pub logger: Option<UdpSocket>,
+    pub logger: Option<UdpSocket>, 
     pub message: Option<String>
 }
 
@@ -73,15 +73,28 @@ impl Editor {
             let socket = UdpSocket::bind("127.0.0.1:8000").unwrap();
             socket.connect(format!("127.0.0.1:{}", port)).unwrap();
 
-            return Ok(Editor {
-                buffer: buf,
-                command: Command::new(),
-                motion: MotionBuffer::new(),
-                should_quit: false,
-                size: (0, 0),
-                logger: Some(socket),
-                message: None
-            });
+            // TODO: this won't always work
+            if socket.send(b"connection test").is_ok() {
+                return Ok(Editor {
+                    buffer: buf,
+                    command: Command::new(),
+                    motion: MotionBuffer::new(),
+                    should_quit: false,
+                    size: (0, 0),
+                    logger: Some(socket),
+                    message: None
+                });
+            } else {
+                return Ok(Editor {
+                    buffer: buf,
+                    command: Command::new(),
+                    motion: MotionBuffer::new(),
+                    should_quit: false,
+                    size: (0, 0),
+                    logger: None,
+                    message: None
+                });
+            }
         }
     }
 
@@ -202,7 +215,7 @@ impl Editor {
                 self.buffer.new_line_above();
             },
             "o" => {
-                self.buffer.new_line_below();
+                self.buffer.new_line_below(self.size);
             },
             "w" => self.buffer.move_next_word(),
             "b" => self.buffer.move_back_word(),
@@ -227,7 +240,7 @@ impl Editor {
     // BUG: most likely definetly won't work
     pub fn save(&mut self) {
          // NOTE: too much extra memory
-
+        /*
         let mut total_string = "".to_string();
 
         for line in self.buffer.lines.lines.iter() {
@@ -246,5 +259,7 @@ impl Editor {
         } else {
             return;
         }
+        */
+        self.buffer.save();
     }
 }
