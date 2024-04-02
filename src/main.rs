@@ -26,14 +26,16 @@ static X_OFFSET: u16 = 5;
 
 async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
+    /*
     if filename.is_none() {
-        // TODO: open an empty buffer when no file is provided
-            // requires a rework?
-        println!("no file provided");
+        println!("no path provided");
         return Ok(());
     }
+    */
 
-    let filename = filename.unwrap();
+    let filename = filename.unwrap_or(String::from("."));
+
+    //let filename = filename.unwrap();
     let filename = std::path::Path::new(&filename);
 
     let mut tui = Tui::new()?.tick_rate(1.0);
