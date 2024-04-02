@@ -236,30 +236,8 @@ impl Editor {
 
     // NOTE: saving functions
 
-
-    // BUG: most likely definetly won't work
     pub fn save(&mut self) {
          // NOTE: too much extra memory
-        /*
-        let mut total_string = "".to_string();
-
-        for line in self.buffer.lines.lines.iter() {
-            total_string.push_str(&line.text);
-
-            total_string.push('\n');
-        }
-
-        if let Some(file) = &self.buffer.file {
-            let status = std::fs::write(file, total_string.as_bytes());
-
-            match status {
-                Ok(_) => {},
-                Err(_) => panic!("writing to file didn't work"),
-            }
-        } else {
-            return;
-        }
-        */
         self.buffer.save();
     }
 }

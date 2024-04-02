@@ -68,11 +68,18 @@ impl Buffer {
                 btype = BufferType::Directory;
                 lines = Lines { lines: vec![] };
 
+                let self_dot = String::from(".");
+                let parent_dot = String::from("..");
+
+                let line: Line = Line { text: Box::new(self_dot.clone()), length: self_dot.len() as u16 };
+                lines.lines.push(line);
+
+                let line: Line = Line { text: Box::new(parent_dot.clone()), length: parent_dot.len() as u16 };
+                lines.lines.push(line);
+
+
                 let reader = read_dir(path).unwrap();
 
-
-                // TODO: sort entries and handle events for dirs
-                // found error
                 for path in reader {
                     let path = path.unwrap().file_name().into_string().unwrap();
                     let len = path.len();
@@ -80,7 +87,6 @@ impl Buffer {
                     let line: Line = Line { text: Box::new(path), length: len as u16 };
                     lines.lines.push(line);
                 }
-
             } else {
                 panic!("what did you do");
             }
