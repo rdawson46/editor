@@ -26,12 +26,6 @@ static X_OFFSET: u16 = 5;
 
 async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
-    /*
-    if filename.is_none() {
-        println!("no path provided");
-        return Ok(());
-    }
-    */
 
     let filename = filename.unwrap_or(String::from("."));
 
@@ -48,13 +42,13 @@ async fn run() -> Result<()> {
     loop {
         tui.terminal.show_cursor()?;
         
-        match &editor.buffer.mode {
+        match &editor.buffers[editor.buf_ptr].mode {
             Mode::Command => {
                 // TODO: set cursor to command line
                 tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
             },
             _ => {
-                tui.terminal.set_cursor(editor.buffer.cursor.current.0 + X_OFFSET, editor.buffer.cursor.current.1)?;
+                tui.terminal.set_cursor(editor.buffers[editor.buf_ptr].cursor.current.0 + X_OFFSET, editor.buffers[editor.buf_ptr].cursor.current.1)?;
             }
         };
 

@@ -36,9 +36,9 @@ pub struct Lines{
     pub lines: Vec<Line>
 }
 
-// TODO: fix what happens on resize
 pub struct Editor {
-    pub buffer: Buffer,
+    pub buffers: Vec<Buffer>,
+    pub buf_ptr: usize,
     pub command: Command,
     pub motion: MotionBuffer,
     pub should_quit: bool,
@@ -60,7 +60,8 @@ impl Editor {
 
         if port == "" || port == "8000"{
             return Ok(Editor {
-                buffer: buf,
+                buffers: vec![buf],
+                buf_ptr: 0,
                 command: Command::new(),
                 motion: MotionBuffer::new(),
                 should_quit: false,
@@ -76,7 +77,8 @@ impl Editor {
             // TODO: this won't always work
             if socket.send(b"connection test").is_ok() {
                 return Ok(Editor {
-                    buffer: buf,
+                    buffers: vec![buf],
+                    buf_ptr: 0,
                     command: Command::new(),
                     motion: MotionBuffer::new(),
                     should_quit: false,
@@ -86,7 +88,8 @@ impl Editor {
                 });
             } else {
                 return Ok(Editor {
-                    buffer: buf,
+                    buffers: vec![buf],
+                    buf_ptr: 0,
                     command: Command::new(),
                     motion: MotionBuffer::new(),
                     should_quit: false,
@@ -99,13 +102,13 @@ impl Editor {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
-        self.buffer.change_mode(mode);
+        self.buffers[self.buf_ptr].change_mode(mode);
     }
 
     // NOTE: display functions
 
     pub fn mode_display(&self) -> (Paragraph, Option<Paragraph>) {
-        match &self.buffer.mode {
+        match &self.buffers[self.buf_ptr].mode {
             Mode::Insert => {
                 (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
             },
@@ -143,12 +146,12 @@ impl Editor {
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
-        match &self.buffer.b_type {
+        match &self.buffers[self.buf_ptr].b_type {
             BufferType::Directory => {
-                self.buffer.insert_key_dir(key);
+                self.buffers[self.buf_ptr].insert_key_dir(key);
             },
             _ => {
-                self.buffer.insert_key_file(key, self.size);
+                self.buffers[self.buf_ptr].insert_key_file(key, self.size);
             }
         }
     }
@@ -158,9 +161,9 @@ impl Editor {
     // TODO: needs to recalculate the viewpoint
     pub fn go_to_line(&mut self, index: usize) {
         let index = index - 1;
-        if index < self.buffer.lines.lines.len() {
-            self.buffer.cursor.current.0 = index as u16;
-            self.buffer.cursor.current.1 = index as u16;
+        if index < self.buffers[self.buf_ptr].lines.lines.len() {
+            self.buffers[self.buf_ptr].cursor.current.0 = index as u16;
+            self.buffers[self.buf_ptr].cursor.current.1 = index as u16;
         } 
     }
 
@@ -190,7 +193,7 @@ impl Editor {
             // perform action then move cursor
             self.motion_func(&motion);
 
-            match &self.buffer.mode {
+            match &self.buffers[self.buf_ptr].mode {
                 Mode::Normal => {},
                 _ => break,
             }
@@ -201,36 +204,77 @@ impl Editor {
 
     pub fn motion_func(&mut self, key: &String) {
         match key.as_str() {
-            ":" => self.buffer.change_mode(Mode::Command),
-            "j" => self.buffer.move_down(self.size),
-            "k" => self.buffer.move_up(),
-            "h" => self.buffer.move_left(),
-            "l" => self.buffer.move_right(),
-            "i" => self.buffer.change_mode(Mode::Insert),
+            ":" => self.buffers[self.buf_ptr].change_mode(Mode::Command),
+            "j" => self.buffers[self.buf_ptr].move_down(self.size),
+            "k" => self.buffers[self.buf_ptr].move_up(),
+            "h" => self.buffers[self.buf_ptr].move_left(),
+            "l" => self.buffers[self.buf_ptr].move_right(),
+            "i" => self.buffers[self.buf_ptr].change_mode(Mode::Insert),
             "a" => {
-                self.buffer.change_mode(Mode::Insert);
-                self.buffer.move_right();
+                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
+                self.buffers[self.buf_ptr].move_right();
             },
             "O" => {
-                self.buffer.new_line_above();
+                self.buffers[self.buf_ptr].new_line_above();
             },
             "o" => {
-                self.buffer.new_line_below(self.size);
+                self.buffers[self.buf_ptr].new_line_below(self.size);
             },
-            "w" => self.buffer.move_next_word(),
-            "b" => self.buffer.move_back_word(),
-            "e" => self.buffer.move_end_word(),
-            "0" => self.buffer.move_begin_of_line(),
-            "$" => self.buffer.move_end_of_line(),
+            "w" => self.buffers[self.buf_ptr].move_next_word(),
+            "b" => self.buffers[self.buf_ptr].move_back_word(),
+            "e" => self.buffers[self.buf_ptr].move_end_word(),
+            "0" => self.buffers[self.buf_ptr].move_begin_of_line(),
+            "$" => self.buffers[self.buf_ptr].move_end_of_line(),
             "I" => {
-                self.buffer.change_mode(Mode::Insert);
-                self.buffer.move_begin_of_line();
+                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
+                self.buffers[self.buf_ptr].move_begin_of_line();
             },
             "A" => {
-                self.buffer.change_mode(Mode::Insert);
-                self.buffer.move_end_of_line();
+                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
+                self.buffers[self.buf_ptr].move_end_of_line();
             },
             _ => {}
+        }
+    }
+
+    // TODO: add function for modifying what the buffer contains
+
+    pub fn new_buffer(&mut self, path: &Path){
+        // WARN: check for possible errors that can return
+        let buf = Buffer::new(path).unwrap();
+
+        self.buffers.push(buf);
+
+        self.next_buf();
+    }
+
+    #[warn(unused)]
+    pub fn close_buffer(&mut self){
+        self.buffers.remove(self.buf_ptr);
+
+        // TODO: figure how this should be handled if this is only buffer
+        // reset buf_ptr, ++/--
+    }
+
+    pub fn next_buf(&mut self) {
+        // make cycling buffer wheel
+        let max = self.buffers.len() - 1;
+
+        let current = self.buf_ptr.checked_add(1).unwrap_or(0) % max;
+
+        self.buf_ptr = current;
+    }
+
+    pub fn prev_buf(&mut self) {
+        let next = self.buf_ptr.checked_sub(1);
+
+        match next {
+            Some(value) => {
+                self.buf_ptr = value;
+            },
+            None => {
+                self.buf_ptr = self.buffers.len().checked_sub(1).unwrap();
+            }
         }
     }
 
@@ -238,6 +282,6 @@ impl Editor {
 
     pub fn save(&mut self) {
          // NOTE: too much extra memory
-        self.buffer.save();
+        self.buffers[self.buf_ptr].save();
     }
 }

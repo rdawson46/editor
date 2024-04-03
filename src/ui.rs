@@ -50,13 +50,13 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let mut line_nums = "".to_string();
     let mut text_string = "".to_string();
 
-    for (i, line) in editor.buffer.lines.lines.iter().skip(editor.buffer.ptr_y.into()).enumerate() {
-        if i > usize::from(editor.buffer.ptr_y + editor.size.1) {
+    for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
+        if i > usize::from(editor.buffers[editor.buf_ptr].ptr_y + editor.size.1) {
             break;
         }
 
         let mut i_str: String;
-        let current_line = usize::from(editor.buffer.cursor.current.1);
+        let current_line = usize::from(editor.buffers[editor.buf_ptr].cursor.current.1);
 
         if current_line != i {
             if current_line > i {
@@ -66,7 +66,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
             }
 
         } else {
-            i_str = (editor.buffer.ptr_y + editor.buffer.cursor.current.1 + 1).to_string();
+            i_str = (editor.buffers[editor.buf_ptr].ptr_y + editor.buffers[editor.buf_ptr].cursor.current.1 + 1).to_string();
             if i_str.len() <= 2 {
                 i_str.push(' ');
             }
@@ -86,6 +86,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         text_string.push('\n');
     }
 
+    // TODO: size of message box
     let (status, motion) = editor.mode_display();
 
     match motion {
@@ -113,10 +114,9 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     
     f.render_widget(Paragraph::new(text_string)
                     .block(Block::default()
-                       .padding(Padding::new(1, 0, 0, 0))),
+                    .padding(Padding::new(1, 0, 0, 0))),
                     num_text_layout[1]);
 }
-
 
 
 //  TODO: fix how modes switch, ???
@@ -134,7 +134,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Key(key) => {
 
             // TODO: add movable cursor with arrow keys
-            match editor.buffer.mode {
+            match editor.buffers[editor.buf_ptr].mode {
                 Mode::Insert => {
                     // TODO: fix for directory
                     editor.insert_key(key);
@@ -187,7 +187,12 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                                 },
                                                 None => {}
                                             }
-                                        }
+                                        },
+                                        CommandKey::NextBuf => editor.next_buf(),
+                                        CommandKey::PrevBuf => editor.prev_buf(),
+                                        CommandKey::NewBuf => {
+                                            editor.new_buffer(std::path::Path::new("."));
+                                        },
                                     }
                                 },
                                 None => {}

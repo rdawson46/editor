@@ -5,7 +5,10 @@ pub enum CommandKey {
     SaveAndQuit,
     Logger,
     Send(String),
-    History
+    History,
+    NextBuf,
+    PrevBuf,
+    NewBuf,
 }
 
 pub struct Command {
@@ -41,6 +44,9 @@ impl Command {
                     let mes = args[1..].join(" ");
                     Some(CommandKey::Send(mes.to_string()))
                 },
+                "bufn" => Some(CommandKey::NextBuf),
+                "bufp" => Some(CommandKey::PrevBuf),
+                "newbuf" => Some(CommandKey::NewBuf),
                 _ => None
             };
         }
