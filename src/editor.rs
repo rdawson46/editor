@@ -58,7 +58,7 @@ impl Editor {
             None => "".to_string()
         };
 
-        if port == "" || port == "8000"{
+        if port == "" || port == "8080"{
             return Ok(Editor {
                 buffers: vec![buf],
                 buf_ptr: 0,
@@ -71,7 +71,7 @@ impl Editor {
             });
         } else {
             //  TODO: connect to udp socket here and save socket to logger
-            let socket = UdpSocket::bind("127.0.0.1:8000").unwrap();
+            let socket = UdpSocket::bind("127.0.0.1:8080").unwrap();
             socket.connect(format!("127.0.0.1:{}", port)).unwrap();
 
             // TODO: this won't always work
@@ -241,11 +241,23 @@ impl Editor {
 
     pub fn new_buffer(&mut self, path: &Path){
         // WARN: check for possible errors that can return
-        let buf = Buffer::new(path).unwrap();
+        let buf = Buffer::new(path);
 
-        self.buffers.push(buf);
-
-        self.next_buf();
+        match buf {
+            Ok(buf) => {
+                self.buffers.push(buf);
+                self.next_buf();
+            },
+            Err(_) => {
+                // log out error to udp socket
+                match &self.logger {
+                    Some(socket) => {
+                        let _ = socket.send(b"Can't make buffer");
+                    },
+                    None => {}
+                }
+            },
+        }
     }
 
     #[warn(unused)]
