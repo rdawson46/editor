@@ -170,7 +170,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                         CommandKey::History => todo!(),
                                         CommandKey::Logger => {
                                             // TODO: finish this up
-
                                             let output = match &editor.logger {
                                                 Some(socket) => {
                                                     let addr = socket.local_addr().unwrap().to_string();
@@ -181,6 +180,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                             editor.message = Some(output);
                                         },
                                         CommandKey::Send(message) => {
+                                            // TODO: make function for sending
                                             match &editor.logger {
                                                 Some(socket) => {
                                                     let _ = socket.send(message.as_bytes());
@@ -191,8 +191,19 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                         CommandKey::NextBuf => editor.next_buf(),
                                         CommandKey::PrevBuf => editor.prev_buf(),
                                         CommandKey::NewBuf => {
+                                            match &editor.logger{
+                                                Some(socket) => {
+                                                    let _ = socket.send("New Buffer".as_bytes());
+                                                },
+                                                None => {}
+                                            }
                                             editor.new_buffer(std::path::Path::new("."));
                                         },
+                                        CommandKey::BufCount => {
+                                            // sent message to count of opened buffers
+                                            let message = String::from(format!("{} open buffers", editor.buffers.len()));
+                                            editor.message = Some(message);
+                                        }
                                     }
                                 },
                                 None => {}

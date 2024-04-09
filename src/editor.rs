@@ -270,7 +270,7 @@ impl Editor {
 
     pub fn next_buf(&mut self) {
         // make cycling buffer wheel
-        let max = self.buffers.len() - 1;
+        let max = self.buffers.len();
 
         let current = self.buf_ptr.checked_add(1).unwrap_or(0) % max;
 

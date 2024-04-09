@@ -9,6 +9,7 @@ pub enum CommandKey {
     NextBuf,
     PrevBuf,
     NewBuf,
+    BufCount
 }
 
 pub struct Command {
@@ -33,7 +34,7 @@ impl Command {
         } else {
             // TODO: parse commands to allow for args to be passed
             let args: Vec<&str> = command.split(' ').collect();
-            //ck = match command.as_str() {
+
             ck = match *args.get(0).expect("") {
                 "wq" | "x" => Some(CommandKey::SaveAndQuit),
                 "q" => Some(CommandKey::Quit),
@@ -47,6 +48,7 @@ impl Command {
                 "bufn" => Some(CommandKey::NextBuf),
                 "bufp" => Some(CommandKey::PrevBuf),
                 "newbuf" => Some(CommandKey::NewBuf),
+                "bufcount" => Some(CommandKey::BufCount),
                 _ => None
             };
         }
