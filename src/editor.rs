@@ -102,6 +102,7 @@ impl Editor {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
+        self.message = None;
         self.buffers[self.buf_ptr].change_mode(mode);
     }
 
@@ -295,5 +296,18 @@ impl Editor {
     pub fn save(&mut self) {
          // NOTE: too much extra memory
         self.buffers[self.buf_ptr].save();
+    }
+
+    // NOTE: functions for logging
+    #[warn(unused)]
+    pub fn send(&self, message: String){
+        let _output = {
+            match &self.logger {
+                Some(socket) => {
+                    let _ = socket.send(message.as_bytes());
+                },
+                None => {}
+            }
+        };
     }
 }

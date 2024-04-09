@@ -181,22 +181,18 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
                                         },
                                         CommandKey::Send(message) => {
                                             // TODO: make function for sending
-                                            match &editor.logger {
-                                                Some(socket) => {
-                                                    let _ = socket.send(message.as_bytes());
-                                                },
-                                                None => {}
-                                            }
+                                            editor.send(message);
                                         },
-                                        CommandKey::NextBuf => editor.next_buf(),
-                                        CommandKey::PrevBuf => editor.prev_buf(),
+                                        CommandKey::NextBuf => {
+                                            editor.next_buf();
+                                            editor.send(String::from(format!("buf: {}", editor.buf_ptr)));
+                                        },
+                                        CommandKey::PrevBuf => {
+                                            editor.prev_buf();
+                                            editor.send(String::from(format!("buf: {}", editor.buf_ptr)));
+                                        },
                                         CommandKey::NewBuf => {
-                                            match &editor.logger{
-                                                Some(socket) => {
-                                                    let _ = socket.send("New Buffer".as_bytes());
-                                                },
-                                                None => {}
-                                            }
+                                            editor.send(String::from("New buffer"));
                                             editor.new_buffer(std::path::Path::new("."));
                                         },
                                         CommandKey::BufCount => {

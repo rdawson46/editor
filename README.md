@@ -5,8 +5,7 @@ Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 This branch will feature adding a vim like command buffer
 
 ## Todo
-* adding commands to switch buffers
-    - add udp logging for when these commands a use for testing
+* refactor functions 
 * add functionality to file tree
 * fix all todos and fixes in proj
 * improve word jumps, add f/F/t/T
