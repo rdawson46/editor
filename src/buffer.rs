@@ -144,7 +144,7 @@ impl Buffer {
 
     // functions for handling inputs for different types
     pub fn insert_key_dir(&mut self, _key: KeyEvent) {
-
+        // TODO: add functionality here
     }
 
     pub fn insert_key_file(&mut self, key: KeyEvent, size: (u16, u16)) {

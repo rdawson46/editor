@@ -1,13 +1,13 @@
+use crate::command::{Command, CommandKey};
+use crate::buffer::{Buffer, BufferType};
+use crate::motion::MotionBuffer;
+use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
 use std::path::Path;
 use std::usize;
-use crossterm::event::KeyEvent;
 use ratatui::prelude::Alignment;
 use ratatui::widgets::{Paragraph, Borders, Block};
-use crate::command::Command;
-use crate::motion::MotionBuffer;
 use std::net::UdpSocket;
-use crate::buffer::{Buffer, BufferType};
 
 pub enum Mode{
     Insert, 
@@ -144,6 +144,128 @@ impl Editor {
         }
     }
 
+
+    // FIX: make this better, good luck
+    // needs to add functionality based on buffertype
+    /*
+     * idea:
+     * pass to function based off buffertype
+    */
+    pub fn key_press(&mut self, key: KeyEvent){
+        match self.buffers[self.buf_ptr].b_type {
+            BufferType::Directory => self.directory_key_press(key),
+            BufferType::File => self.file_key_press(key),
+            BufferType::Empty => self.empty_key_press(key),
+        }
+    }
+
+    fn empty_key_press(&mut self, key: KeyEvent){}
+
+    // TODO: implement this 
+    fn directory_key_press(&mut self, key: KeyEvent){
+
+    }
+
+    fn file_key_press(&mut self, key: KeyEvent){
+        match self.buffers[self.buf_ptr].mode {
+            Mode::Insert => {
+                // TODO: fix this, won't work with directory buffers
+                self.insert_key(key);
+            },
+
+            Mode::Command => {
+                match key.code {
+                    KeyCode::Char(value) => {
+                        if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                            self.change_mode(Mode::Normal);
+                        } else {
+                            self.command.text.push(value);
+                        }
+                    },
+                    KeyCode::Esc => {
+                        self.change_mode(Mode::Normal);
+                    }
+                    KeyCode::Enter => {
+                        let command = self.command.confirm();
+
+                        match command {
+                            Some(command) => {
+                                match command {
+                                    CommandKey::Save => self.save(),
+                                    CommandKey::Quit => self.should_quit = true,
+                                    CommandKey::Line(number) => {
+                                        self.go_to_line(number);
+                                    },
+                                    CommandKey::SaveAndQuit => {
+                                        self.save();
+                                        self.should_quit = true;
+                                    },
+                                    CommandKey::History => todo!(),
+                                    CommandKey::Logger => {
+                                        // TODO: finish this up
+                                        let output = match &self.logger {
+                                            Some(socket) => {
+                                                let addr = socket.local_addr().unwrap().to_string();
+                                                format!("Binded to {}", addr)
+                                            },
+                                            None => "Not Connected".to_string()
+                                        };
+                                        self.message = Some(output);
+                                    },
+                                    CommandKey::Send(message) => {
+                                        // TODO: make function for sending
+                                        self.send(message);
+                                    },
+                                    CommandKey::NextBuf => {
+                                        self.next_buf();
+                                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
+                                    },
+                                    CommandKey::PrevBuf => {
+                                        self.prev_buf();
+                                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
+                                    },
+                                    CommandKey::NewBuf => {
+                                        self.send(String::from("New buffer"));
+                                        self.new_buffer(std::path::Path::new("."));
+                                    },
+                                    CommandKey::BufCount => {
+                                        // sent message to count of opened buffers
+                                        let message = String::from(format!("{} open buffers", self.buffers.len()));
+                                        self.message = Some(message);
+                                    }
+                                }
+                            },
+                            None => {}
+                        }
+                        self.change_mode(Mode::Normal);
+                    },
+                    _ => {}
+                }
+            },
+            Mode::Normal => {
+                match key.code {
+                    KeyCode::Char(value) => {
+                        if value == 's' && key.modifiers == KeyModifiers::CONTROL {
+                            self.save();
+                        } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                            self.motion.clear();
+                        } else {
+                            let res = self.motion.push(value);
+
+                            match res {
+                                Some(_) => {
+                                    let _ = self.parse();
+                                    self.motion.clear();
+                                },
+                                None => {}
+                            }
+                        }
+                    },
+                    _ => {}
+                }
+            }
+        }
+    }
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {

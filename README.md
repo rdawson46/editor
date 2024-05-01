@@ -6,10 +6,10 @@ This branch will feature adding a vim like command buffer
 
 ## Todo
 * add functionality to file tree
-* add syntax highlighting with tree-sitter
+    * refactor functions and system
 * fix all todos and fixes in proj
 * later implement ptr_x for longer lines
+* add syntax highlighting with tree-sitter
 * add f/F/t/T
 * improve commands interface
-* refactor functions
 * add actions, like delete, to motions

@@ -119,7 +119,29 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 }
 
 
-//  TODO: fix how modes switch, ???
+pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
+    match event {
+        Event::Init => {},
+        Event::Quit => {},
+        Event::Error => {},
+        Event::Closed => {},
+        Event::Tick => {},
+        Event::Render => {},
+        Event::FocusGained => {},
+        Event::FocusLost => {},
+        Event::Paste(_) => {},
+        Event::Key(key) => {
+            // TODO: add functionality here; keep it simple
+            // pass the key value to the editor
+            editor.key_press(key);
+        },
+        Event::Mouse(_) => {},
+        Event::Resize(x, y) => {
+            tui.size = (x, y);
+        },
+    }
+}
+/*
 pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
     match event {
         Event::Init => {},
@@ -136,7 +158,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
             // TODO: add movable cursor with arrow keys
             match editor.buffers[editor.buf_ptr].mode {
                 Mode::Insert => {
-                    // TODO: fix for directory
+                    // TODO: fix this, won't work with directory buffers
                     editor.insert_key(key);
                 },
 
@@ -249,3 +271,4 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         },
     }
 }
+*/
