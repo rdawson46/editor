@@ -9,6 +9,12 @@ use ratatui::prelude::Alignment;
 use ratatui::widgets::{Paragraph, Borders, Block};
 use std::net::UdpSocket;
 
+macro_rules! current_buf {
+    ($e: expr) => {
+        $e.buffers[$e.buf_ptr]
+    };
+}
+
 pub enum Mode{
     Insert, 
     Command,
@@ -103,13 +109,13 @@ impl Editor {
 
     pub fn change_mode(&mut self, mode: Mode) {
         self.message = None;
-        self.buffers[self.buf_ptr].change_mode(mode);
+        current_buf!(self).change_mode(mode);
     }
 
     // NOTE: display functions
 
     pub fn mode_display(&self) -> (Paragraph, Option<Paragraph>) {
-        match &self.buffers[self.buf_ptr].mode {
+        match &current_buf!(self).mode {
             Mode::Insert => {
                 (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
             },
@@ -122,7 +128,7 @@ impl Editor {
                     None => {}
                 }
 
-                match &self.motion.command {
+                match &self.motion.action {
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
                 }
@@ -150,24 +156,68 @@ impl Editor {
     /*
      * idea:
      * pass to function based off buffertype
+     * empty will pretty much be same as file, will need modifications for saving
     */
     pub fn key_press(&mut self, key: KeyEvent){
-        match self.buffers[self.buf_ptr].b_type {
+        match current_buf!(self).b_type {
             BufferType::Directory => self.directory_key_press(key),
-            BufferType::File => self.file_key_press(key),
-            BufferType::Empty => self.empty_key_press(key),
+            BufferType::File | BufferType::Empty => self.file_key_press(key),
         }
     }
 
-    fn empty_key_press(&mut self, key: KeyEvent){}
-
-    // TODO: implement this 
+    // TODO: create function for handling commands so that they aren't handled in these functions
+    // add permission checks to buffers when saving
     fn directory_key_press(&mut self, key: KeyEvent){
+        // only have command and normal mode
+        match current_buf!(self).mode {
+            Mode::Command => {
+                match key.code {
+                    KeyCode::Char(value) => {
+                        if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                            self.change_mode(Mode::Normal);
+                        } else {
+                            self.command.text.push(value);
+                        }
+                    },
+                    KeyCode::Esc => {
+                        self.change_mode(Mode::Normal);
+                    }
+                    KeyCode::Enter => {
+                        let command = self.command.confirm();
+                        self.handle_command(command);
+                        self.change_mode(Mode::Normal);
+                    },
+                    _ => {}
+                }
+            },
+            Mode::Normal => {
+                // TODO: change this impl to work with opening buffers and such
+                // will have to create functions to handle operations
+                match key.code {
+                    KeyCode::Char(value) => {
+                        if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                            self.motion.clear();
+                        } else {
+                            let res = self.motion.push(value);
 
+                            match res {
+                                Some(_) => {
+                                    let _ = self.parse();
+                                    self.motion.clear();
+                                },
+                                None => {}
+                            }
+                        }
+                    },
+                    _ => {}
+                }
+            }
+            _ => {},
+        }
     }
 
     fn file_key_press(&mut self, key: KeyEvent){
-        match self.buffers[self.buf_ptr].mode {
+        match current_buf!(self).mode {
             Mode::Insert => {
                 // TODO: fix this, won't work with directory buffers
                 self.insert_key(key);
@@ -187,56 +237,7 @@ impl Editor {
                     }
                     KeyCode::Enter => {
                         let command = self.command.confirm();
-
-                        match command {
-                            Some(command) => {
-                                match command {
-                                    CommandKey::Save => self.save(),
-                                    CommandKey::Quit => self.should_quit = true,
-                                    CommandKey::Line(number) => {
-                                        self.go_to_line(number);
-                                    },
-                                    CommandKey::SaveAndQuit => {
-                                        self.save();
-                                        self.should_quit = true;
-                                    },
-                                    CommandKey::History => todo!(),
-                                    CommandKey::Logger => {
-                                        // TODO: finish this up
-                                        let output = match &self.logger {
-                                            Some(socket) => {
-                                                let addr = socket.local_addr().unwrap().to_string();
-                                                format!("Binded to {}", addr)
-                                            },
-                                            None => "Not Connected".to_string()
-                                        };
-                                        self.message = Some(output);
-                                    },
-                                    CommandKey::Send(message) => {
-                                        // TODO: make function for sending
-                                        self.send(message);
-                                    },
-                                    CommandKey::NextBuf => {
-                                        self.next_buf();
-                                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
-                                    },
-                                    CommandKey::PrevBuf => {
-                                        self.prev_buf();
-                                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
-                                    },
-                                    CommandKey::NewBuf => {
-                                        self.send(String::from("New buffer"));
-                                        self.new_buffer(std::path::Path::new("."));
-                                    },
-                                    CommandKey::BufCount => {
-                                        // sent message to count of opened buffers
-                                        let message = String::from(format!("{} open buffers", self.buffers.len()));
-                                        self.message = Some(message);
-                                    }
-                                }
-                            },
-                            None => {}
-                        }
+                        self.handle_command(command);
                         self.change_mode(Mode::Normal);
                     },
                     _ => {}
@@ -269,24 +270,24 @@ impl Editor {
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     pub fn insert_key(&mut self, key: KeyEvent) {
-        match &self.buffers[self.buf_ptr].b_type {
+        match &current_buf!(self).b_type {
             BufferType::Directory => {
-                self.buffers[self.buf_ptr].insert_key_dir(key);
+                current_buf!(self).insert_key_dir(key);
             },
             _ => {
-                self.buffers[self.buf_ptr].insert_key_file(key, self.size);
+                current_buf!(self).insert_key_file(key, self.size);
             }
         }
     }
 
     // NOTE: word movements
 
-    // TODO: needs to recalculate the viewpoint
+    // TODO: needs to recalculate the viewpoint, won't be too bad
     pub fn go_to_line(&mut self, index: usize) {
         let index = index - 1;
-        if index < self.buffers[self.buf_ptr].lines.lines.len() {
-            self.buffers[self.buf_ptr].cursor.current.0 = index as u16;
-            self.buffers[self.buf_ptr].cursor.current.1 = index as u16;
+        if index < current_buf!(self).lines.lines.len() {
+            current_buf!(self).cursor.current.0 = index as u16;
+            current_buf!(self).cursor.current.1 = index as u16;
         } 
     }
 
@@ -307,7 +308,13 @@ impl Editor {
             None => "".to_string(),
         };
 
-        let _command = match &self.motion.command {
+        // TODO: figure out how have these commands run
+        let action = match &self.motion.action {
+            Some(value) => value.clone(),
+            None => "".to_string(),
+        };
+
+        let action_args = match &self.motion.action_arg {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
@@ -316,7 +323,18 @@ impl Editor {
             // perform action then move cursor
             self.motion_func(&motion);
 
-            match &self.buffers[self.buf_ptr].mode {
+            match &current_buf!(self).mode {
+                Mode::Normal => {},
+                _ => break,
+            }
+        }
+
+        // FIX: rename the command to prevent confusion
+        for _ in 0..count {
+            // perform action then move cursor
+            self.action_func(&action, &action_args);
+
+            match &current_buf!(self).mode {
                 Mode::Normal => {},
                 _ => break,
             }
@@ -325,37 +343,99 @@ impl Editor {
         Ok(0)
     }
 
+    pub fn handle_command(&mut self, command: Option<CommandKey>){
+        match command {
+            Some(command) => {
+                match command {
+                    CommandKey::Save => self.save(),
+                    CommandKey::Quit => self.should_quit = true,
+                    CommandKey::Line(number) => {
+                        self.go_to_line(number);
+                    },
+                    CommandKey::SaveAndQuit => {
+                        self.save();
+                        self.should_quit = true;
+                    },
+                    CommandKey::History => todo!(),
+                    CommandKey::Logger => {
+                        // TODO: finish this up
+                        let output = match &self.logger {
+                            Some(socket) => {
+                                let addr = socket.local_addr().unwrap().to_string();
+                                format!("Binded to {}", addr)
+                            },
+                            None => "Not Connected".to_string()
+                        };
+                        self.message = Some(output);
+                    },
+                    CommandKey::Send(message) => {
+                        // TODO: make function for sending
+                        self.send(message);
+                    },
+                    CommandKey::NextBuf => {
+                        self.next_buf();
+                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
+                    },
+                    CommandKey::PrevBuf => {
+                        self.prev_buf();
+                        self.send(String::from(format!("buf: {}", self.buf_ptr)));
+                    },
+                    CommandKey::NewBuf => {
+                        self.send(String::from("New buffer"));
+                        self.new_buffer(std::path::Path::new("."));
+                    },
+                    CommandKey::BufCount => {
+                        // sent message to count of opened buffers
+                        let message = String::from(format!("{} open buffers", self.buffers.len()));
+                        self.message = Some(message);
+                    }
+                }
+            },
+            None => {}
+        }
+    }
+
     pub fn motion_func(&mut self, key: &String) {
         match key.as_str() {
-            ":" => self.buffers[self.buf_ptr].change_mode(Mode::Command),
-            "j" => self.buffers[self.buf_ptr].move_down(self.size),
-            "k" => self.buffers[self.buf_ptr].move_up(),
-            "h" => self.buffers[self.buf_ptr].move_left(),
-            "l" => self.buffers[self.buf_ptr].move_right(),
-            "i" => self.buffers[self.buf_ptr].change_mode(Mode::Insert),
+            ":" => current_buf!(self).change_mode(Mode::Command),
+            "j" => current_buf!(self).move_down(self.size),
+            "k" => current_buf!(self).move_up(),
+            "h" => current_buf!(self).move_left(),
+            "l" => current_buf!(self).move_right(),
+            "i" => current_buf!(self).change_mode(Mode::Insert),
             "a" => {
-                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
-                self.buffers[self.buf_ptr].move_right();
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_right();
             },
             "O" => {
-                self.buffers[self.buf_ptr].new_line_above();
+                current_buf!(self).new_line_above();
             },
             "o" => {
-                self.buffers[self.buf_ptr].new_line_below(self.size);
+                current_buf!(self).new_line_below(self.size);
             },
-            "w" => self.buffers[self.buf_ptr].move_next_word(),
-            "b" => self.buffers[self.buf_ptr].move_back_word(),
-            "e" => self.buffers[self.buf_ptr].move_end_word(),
-            "0" => self.buffers[self.buf_ptr].move_begin_of_line(),
-            "$" => self.buffers[self.buf_ptr].move_end_of_line(),
+            "w" => current_buf!(self).move_next_word(),
+            "b" => current_buf!(self).move_back_word(),
+            "e" => current_buf!(self).move_end_word(),
+            "0" => current_buf!(self).move_begin_of_line(),
+            "$" => current_buf!(self).move_end_of_line(),
             "I" => {
-                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
-                self.buffers[self.buf_ptr].move_begin_of_line();
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_begin_of_line();
             },
             "A" => {
-                self.buffers[self.buf_ptr].change_mode(Mode::Insert);
-                self.buffers[self.buf_ptr].move_end_of_line();
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_end_of_line();
             },
+            _ => {}
+        }
+    }
+
+    // TODO: this will be used for actions, will need action_args
+    pub fn action_func(&mut self, key: &String, args: &String){
+        match key.as_str() {
+            "d" => {}
+            "s" => {}
+            "f" => {}
             _ => {}
         }
     }
@@ -415,13 +495,14 @@ impl Editor {
 
     // NOTE: saving functions
 
+    // TODO: make this safer by reading permissions
     pub fn save(&mut self) {
-         // NOTE: too much extra memory
-        self.buffers[self.buf_ptr].save();
+        // NOTE: too much extra memory
+        // current_buf!(self).save();
+        current_buf!(self).save();
     }
 
     // NOTE: functions for logging
-    #[warn(unused)]
     pub fn send(&self, message: String){
         let _output = {
             match &self.logger {
