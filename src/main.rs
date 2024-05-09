@@ -44,7 +44,6 @@ async fn run() -> Result<()> {
         
         match &editor.buffers[editor.buf_ptr].mode {
             Mode::Command => {
-                // TODO: set cursor to command line
                 tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
             },
             _ => {

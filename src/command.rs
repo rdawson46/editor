@@ -32,7 +32,6 @@ impl Command {
         if let Ok(number) = command.parse::<usize>() {
             ck = Some(CommandKey::Line(number));
         } else {
-            // TODO: parse commands to allow for args to be passed
             let args: Vec<&str> = command.split(' ').collect();
 
             ck = match *args.get(0).expect("") {

@@ -47,8 +47,6 @@ pub enum Event{
     Resize(u16, u16),
 }
 
-// TODO: fix this struct
-    // why it's awesome
 pub struct Tui {
     pub terminal: ratatui::Terminal<CrosstermBackend<std::io::Stderr>>,
     pub size: (u16, u16),

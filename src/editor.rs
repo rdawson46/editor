@@ -151,8 +151,6 @@ impl Editor {
     }
 
 
-    // FIX: make this better, good luck
-    // needs to add functionality based on buffertype
     /*
      * idea:
      * pass to function based off buffertype
@@ -219,7 +217,6 @@ impl Editor {
     fn file_key_press(&mut self, key: KeyEvent){
         match current_buf!(self).mode {
             Mode::Insert => {
-                // TODO: fix this, won't work with directory buffers
                 self.insert_key(key);
             },
 
@@ -329,7 +326,7 @@ impl Editor {
             }
         }
 
-        // FIX: rename the command to prevent confusion
+
         for _ in 0..count {
             // perform action then move cursor
             self.action_func(&action, &action_args);

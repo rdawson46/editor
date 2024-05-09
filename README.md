@@ -9,7 +9,9 @@ This branch is functionally different than main:
     - etc
 
 ## Todo
+* add directory buffer events
 * define runtime better for action (motions, commands, etc) handling
+* improve/fix testing suite
 * fix all todos and fixes in proj
 * add actions, like delete, to motions
 * later implement ptr_x for longer lines

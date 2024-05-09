@@ -3,10 +3,7 @@ use std::usize;
 use crate::Event;
 use crate::Tui;
 use crate::X_OFFSET;
-use crate::command::CommandKey;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyModifiers;
-use crate::editor::{Editor, Mode};
+use crate::editor::Editor;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
@@ -14,8 +11,6 @@ use ratatui::{
     Frame,
 };
 
-// TODO: replace editor.ptr with y_ptr and x_ptr for horizontal scrolling
-// fix for buffer types
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     // wrapper_layout[0] is for the text and line numbers
@@ -86,7 +81,6 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         text_string.push('\n');
     }
 
-    // TODO: size of message box
     let (status, motion) = editor.mode_display();
 
     match motion {
@@ -131,8 +125,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::FocusLost => {},
         Event::Paste(_) => {},
         Event::Key(key) => {
-            // TODO: add functionality here; keep it simple
-            // pass the key value to the editor
             editor.key_press(key);
         },
         Event::Mouse(_) => {},
@@ -158,7 +150,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
             // TODO: add movable cursor with arrow keys
             match editor.buffers[editor.buf_ptr].mode {
                 Mode::Insert => {
-                    // TODO: fix this, won't work with directory buffers
                     editor.insert_key(key);
                 },
 
