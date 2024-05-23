@@ -108,8 +108,8 @@ impl Editor {
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
-        self.message = None;
         current_buf!(self).change_mode(mode);
+        //self.set_message(None);
     }
 
     // NOTE: display functions
@@ -135,12 +135,13 @@ impl Editor {
                 
                 let status = match &self.message {
                     Some(value) => {
+                        self.send(value.to_owned());
                         value.to_owned()
                     },
                     None => "-- Normal --".to_string()
                 };
 
-                let status = Paragraph::new(format!("{}", status) ).block(Block::default().borders(Borders::TOP));
+                let status = Paragraph::new(format!("{}", status)).block(Block::default().borders(Borders::TOP));
                 let motion = Paragraph::new(format!("{}", motion_str)).block(Block::default().borders(Borders::TOP)).alignment(Alignment::Center);
                 (status, Some(motion))
             },
@@ -159,7 +160,8 @@ impl Editor {
     pub fn key_press(&mut self, key: KeyEvent){
         match current_buf!(self).b_type {
             BufferType::Directory => self.directory_key_press(key),
-            BufferType::File | BufferType::Empty => self.file_key_press(key),
+            BufferType::File => self.file_key_press(key),
+            BufferType::Empty => {}, // FIX: add same to file
         }
     }
 
@@ -168,27 +170,9 @@ impl Editor {
     fn directory_key_press(&mut self, key: KeyEvent){
         // only have command and normal mode
         match current_buf!(self).mode {
-            Mode::Command => {
-                match key.code {
-                    KeyCode::Char(value) => {
-                        if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.change_mode(Mode::Normal);
-                        } else {
-                            self.command.text.push(value);
-                        }
-                    },
-                    KeyCode::Esc => {
-                        self.change_mode(Mode::Normal);
-                    }
-                    KeyCode::Enter => {
-                        let command = self.command.confirm();
-                        self.handle_command(command);
-                        self.change_mode(Mode::Normal);
-                    },
-                    _ => {}
-                }
-            },
+            Mode::Command => self.command_line_key(key),
             Mode::Normal => {
+
                 // TODO: change this impl to work with opening buffers and such
                 // will have to create functions to handle operations
                 match key.code {
@@ -216,35 +200,14 @@ impl Editor {
 
     fn file_key_press(&mut self, key: KeyEvent){
         match current_buf!(self).mode {
-            Mode::Insert => {
-                self.insert_key(key);
-            },
-
-            Mode::Command => {
-                match key.code {
-                    KeyCode::Char(value) => {
-                        if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.change_mode(Mode::Normal);
-                        } else {
-                            self.command.text.push(value);
-                        }
-                    },
-                    KeyCode::Esc => {
-                        self.change_mode(Mode::Normal);
-                    }
-                    KeyCode::Enter => {
-                        let command = self.command.confirm();
-                        self.handle_command(command);
-                        self.change_mode(Mode::Normal);
-                    },
-                    _ => {}
-                }
-            },
+            Mode::Insert => self.insert_key(key),
+            Mode::Command => self.command_line_key(key),
             Mode::Normal => {
                 match key.code {
                     KeyCode::Char(value) => {
                         if value == 's' && key.modifiers == KeyModifiers::CONTROL {
-                            self.save();
+                            let update = self.save();
+                            self.set_message(Some(update.clone()));
                         } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             self.motion.clear();
                         } else {
@@ -262,6 +225,35 @@ impl Editor {
                     _ => {}
                 }
             }
+        }
+    }
+
+    pub fn command_line_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char(value) => {
+                if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
+                    self.change_mode(Mode::Normal);
+                } else {
+                    self.command.text.push(value);
+                }
+            },
+            KeyCode::Esc => {
+                self.change_mode(Mode::Normal);
+            }
+            KeyCode::Enter => {
+                let command = self.command.confirm();
+                self.handle_command(command);
+                self.change_mode(Mode::Normal);
+            },
+            KeyCode::Backspace => {
+                if self.command.text.len() > 0 {
+                    // TODO: add movable cursor
+                    self.command.text.pop();
+                } else {
+                    self.change_mode(Mode::Normal);
+                }
+            },
+            _ => {}
         }
     }
     
@@ -344,8 +336,11 @@ impl Editor {
         match command {
             Some(command) => {
                 match command {
-                    CommandKey::Save => self.save(),
-                    CommandKey::Quit => self.should_quit = true,
+                    CommandKey::Save => {
+                        let update = self.save();
+                        self.set_message(Some(update))
+                    },
+                    CommandKey::Quit => self.close_buffer(),
                     CommandKey::Line(number) => {
                         self.go_to_line(number);
                     },
@@ -363,7 +358,7 @@ impl Editor {
                             },
                             None => "Not Connected".to_string()
                         };
-                        self.message = Some(output);
+                        self.set_message(Some(output))
                     },
                     CommandKey::Send(message) => {
                         // TODO: make function for sending
@@ -384,7 +379,7 @@ impl Editor {
                     CommandKey::BufCount => {
                         // sent message to count of opened buffers
                         let message = String::from(format!("{} open buffers", self.buffers.len()));
-                        self.message = Some(message);
+                        self.set_message(Some(message))
                     }
                 }
             },
@@ -428,7 +423,7 @@ impl Editor {
     }
 
     // TODO: this will be used for actions, will need action_args
-    pub fn action_func(&mut self, key: &String, args: &String){
+    pub fn action_func(&mut self, key: &String, _args: &String){
         match key.as_str() {
             "d" => {}
             "s" => {}
@@ -460,12 +455,20 @@ impl Editor {
         }
     }
 
-    #[warn(unused)]
+    // TODO: figure how this should be handled if this is only buffer
+    // reset buf_ptr, ++/--
     pub fn close_buffer(&mut self){
-        self.buffers.remove(self.buf_ptr);
+        if self.buffers.len() == 1 {
+            self.should_quit = true;
+            return;
+        }
 
-        // TODO: figure how this should be handled if this is only buffer
-        // reset buf_ptr, ++/--
+        self.buffers.remove(self.buf_ptr);
+        
+        if self.buf_ptr > 0 {
+            self.buf_ptr -= 1;
+        }
+
     }
 
     pub fn next_buf(&mut self) {
@@ -490,13 +493,22 @@ impl Editor {
         }
     }
 
+    pub fn set_message(&mut self, new_mes: Option<String>) {
+        match new_mes {
+            Some(message) => {
+                self.message = Some(message.clone());
+                self.send(format!("Set Message {}", message.clone()))
+            },
+            None => self.message = None
+        }
+    }
+
     // NOTE: saving functions
 
     // TODO: make this safer by reading permissions
-    pub fn save(&mut self) {
-        // NOTE: too much extra memory
-        // current_buf!(self).save();
-        current_buf!(self).save();
+    pub fn save(&mut self) -> String {
+        // FIX: too much extra memory
+        return current_buf!(self).save();
     }
 
     // NOTE: functions for logging

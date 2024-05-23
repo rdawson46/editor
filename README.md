@@ -9,6 +9,9 @@ This branch is functionally different than main:
     - etc
 
 ## Todo
+* work out messages not displaying and clearing
+    * due to clearing message when changing mode
+* impl ropes into system
 * add directory buffer events
 * define runtime better for action (motions, commands, etc) handling
 * improve/fix testing suite

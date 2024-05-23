@@ -402,7 +402,7 @@ impl Buffer {
         self.change_mode(Mode::Insert);
     }
 
-    pub fn save(&self) {
+    pub fn save(&self) -> String {
         if self.b_type == BufferType::File {
             let mut total_string = "".to_string();
 
@@ -416,14 +416,16 @@ impl Buffer {
                 let status = std::fs::write(file, total_string.as_bytes());
 
                 match status {
-                    Ok(_) => {},
-                    Err(_) => panic!("writing to file didn't work"),
+                    Ok(_) => {
+                        return format!("Wrote {} bytes", total_string.len())
+                    },
+                    Err(_) => String::from("writing to file didn't work"),
                 }
             } else {
-                return;
+                return String::from("No file found")
             }
         } else {
-            // return warning to be displayed
+            return String::from("Can't write to directory")
         }
     }
 }
