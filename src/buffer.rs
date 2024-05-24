@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{read, KeyCode, KeyEvent, KeyModifiers};
 use std::fs::{File, read_dir};
 use std::io::{BufReader, BufRead};
 use crate::editor::{Cursor, Lines, Line, Mode};
@@ -18,8 +18,10 @@ pub enum BufferType {
     File
 }
 
+// TODO: might need to add a variable for pathing
+// idea: replace file with path
 pub struct Buffer {
-    pub b_type: BufferType,
+    pub buffer_type: BufferType,
     pub lines: Lines,
     pub ptr_y: u16,
     pub ptr_x: u16,
@@ -88,7 +90,7 @@ impl Buffer {
                     lines.lines.push(line);
                 }
             } else {
-                panic!("what did you do");
+                panic!("no thank you");
             }
         } else {
             btype = BufferType::Empty;
@@ -96,7 +98,7 @@ impl Buffer {
         }
 
         return Ok(Buffer {
-            b_type: btype,
+            buffer_type: btype,
             lines,
             ptr_x: 0,
             ptr_y: 0,
@@ -111,7 +113,7 @@ impl Buffer {
     pub fn change_mode(&mut self, mode: Mode) {
         match mode {
             Mode::Insert => {
-                match &self.b_type {
+                match &self.buffer_type {
                     BufferType::Directory => {},
                     _ => {
                         execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
@@ -402,8 +404,81 @@ impl Buffer {
         self.change_mode(Mode::Insert);
     }
 
+    // open file/dir under the cusor in dir menu and replace it in the current buffer
+    // remember to reset cursor and anything else
+    pub fn get_hover_file(&mut self) -> String {
+        // idea:
+        // get the file/dir name hovered over
+        // convert to relative path
+        // open
+        // refresh buffer
+
+        let line_index = usize::from(self.ptr_y + self.cursor.current.1);
+        let current_line = &self.lines.lines[line_index];
+        let file_name = current_line.text.clone();
+
+        let res = &self.open(&file_name);
+
+        if let Ok(_) = res {
+            return *file_name;
+        }
+
+        return "could not open file".to_string();
+    }
+
+    // TODO: grab current path and then join with new name 
+    pub fn open(&mut self, name: &String) -> std::io::Result<()>{
+        // convert name to relative path
+        // check file vs dir
+        // open and return
+        let path = Path::new(name);
+
+        if !path.exists() {
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Path didn't exist"))
+        }
+
+        if path.is_file() {
+            if let Ok(file) = File::open(path) {
+                self.buffer_type = BufferType::File;
+
+                let reader = BufReader::new(file);
+                let mut file_lines: Vec<Line> = vec![];
+
+                for line in reader.lines() {
+                    if let Ok(text) = line {
+                        let length: u16 = text.len().try_into().unwrap();
+                        let boxed_text = Box::new(text);
+                        file_lines.push(Line {
+                            text: boxed_text,
+                            length
+                        });
+                    }
+                }
+
+                self.lines = Lines { lines: file_lines };
+                self.file = Some(path.to_owned());
+            }
+        } else if path.is_dir() {
+            // WARNING: not implemented
+            return Ok(());
+        } else {
+            panic!("no thank you");
+        }
+
+        self.refresh_buffer();
+
+        Ok(())
+    }
+
+    pub fn refresh_buffer(&mut self) {
+        self.cursor = Cursor::new();
+        self.ptr_y = 0;
+        self.ptr_x = 0;
+        self.mode = Mode::Normal;
+    }
+
     pub fn save(&self) -> String {
-        if self.b_type == BufferType::File {
+        if self.buffer_type == BufferType::File {
             let mut total_string = "".to_string();
 
             for line in self.lines.lines.iter() {

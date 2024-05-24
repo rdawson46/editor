@@ -3,11 +3,13 @@ use crate::buffer::{Buffer, BufferType};
 use crate::motion::MotionBuffer;
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
+use std::io::Write;
 use std::path::Path;
 use std::usize;
-use ratatui::prelude::Alignment;
+use ratatui::style::Stylize;
+use ratatui::prelude::{Style, Alignment};
 use ratatui::widgets::{Paragraph, Borders, Block};
-use std::net::UdpSocket;
+use std::net::TcpStream;
 
 macro_rules! current_buf {
     ($e: expr) => {
@@ -49,72 +51,77 @@ pub struct Editor {
     pub motion: MotionBuffer,
     pub should_quit: bool,
     pub size: (u16, u16),
-    pub logger: Option<UdpSocket>, 
+    pub logger: Option<TcpStream>,
     pub message: Option<String>
 }
 
 impl Editor {
     pub fn new(path: &Path)-> Result<Editor> {
         let buf = Buffer::new(path)?;
+
         // port address for logger
         let port = match std::env::args().nth(2) {
-            Some(value) => {
-                value
-            },
+            Some(value) => value,
             None => "".to_string()
         };
 
-        if port == "" || port == "8080"{
-            return Ok(Editor {
-                buffers: vec![buf],
-                buf_ptr: 0,
-                command: Command::new(),
-                motion: MotionBuffer::new(),
-                should_quit: false,
-                size: (0, 0),
-                logger: None,
-                message: None
-            });
-        } else {
-            //  TODO: connect to udp socket here and save socket to logger
-            let socket = UdpSocket::bind("127.0.0.1:8080").unwrap();
-            socket.connect(format!("127.0.0.1:{}", port)).unwrap();
+        if port != "" {
+            //  TODO: 
 
-            // TODO: this won't always work
-            if socket.send(b"connection test").is_ok() {
-                return Ok(Editor {
-                    buffers: vec![buf],
-                    buf_ptr: 0,
-                    command: Command::new(),
-                    motion: MotionBuffer::new(),
-                    should_quit: false,
-                    size: (0, 0),
-                    logger: Some(socket),
-                    message: None
-                });
-            } else {
-                return Ok(Editor {
-                    buffers: vec![buf],
-                    buf_ptr: 0,
-                    command: Command::new(),
-                    motion: MotionBuffer::new(),
-                    should_quit: false,
-                    size: (0, 0),
-                    logger: None,
-                    message: None
-                });
+            // old udp stuff
+            //let socket = UdpSocket::bind("127.0.0.1:8080");
+
+            let stream = TcpStream::connect(format!("127.0.0.1:{}", port));
+
+            if let Ok(mut stream) = stream {
+                // socket.connect(format!("127.0.0.1:{}", port)).unwrap();
+
+
+                // TODO: this won't always work
+                if stream.write(b"connection test").is_ok() {
+                    return Ok(Editor {
+                        buffers: vec![buf],
+                        buf_ptr: 0,
+                        command: Command::new(),
+                        motion: MotionBuffer::new(),
+                        should_quit: false,
+                        size: (0, 0),
+                        logger: Some(stream),
+                        message: None,
+                    });
+                } 
             }
-        }
+        } 
+
+        return Ok(Editor {
+            buffers: vec![buf],
+            buf_ptr: 0,
+            command: Command::new(),
+            motion: MotionBuffer::new(),
+            should_quit: false,
+            size: (0, 0),
+            logger: None,
+            message: None
+        });
     }
 
     pub fn change_mode(&mut self, mode: Mode) {
         current_buf!(self).change_mode(mode);
-        //self.set_message(None);
+
+        // HACK: check if this worked
+
+        match current_buf!(self).mode {
+            Mode::Insert | Mode::Command => {
+                self.set_message(None);
+            }
+            _ => (),
+        }
     }
 
     // NOTE: display functions
 
-    pub fn mode_display(&self) -> (Paragraph, Option<Paragraph>) {
+    // FIX: this issue with the tcp logger
+    pub fn mode_display(&mut self) -> (Paragraph, Option<Paragraph>) {
         match &current_buf!(self).mode {
             Mode::Insert => {
                 (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
@@ -133,16 +140,21 @@ impl Editor {
                     None => {}
                 }
                 
-                let status = match &self.message {
-                    Some(value) => {
-                        self.send(value.to_owned());
-                        value.to_owned()
-                    },
-                    None => "-- Normal --".to_string()
+                let status = match &mut self.message {
+                    Some(value) => value.to_owned(),
+                    None => "-- Normal --".to_string(),
                 };
 
-                let status = Paragraph::new(format!("{}", status)).block(Block::default().borders(Borders::TOP));
-                let motion = Paragraph::new(format!("{}", motion_str)).block(Block::default().borders(Borders::TOP)).alignment(Alignment::Center);
+                let status = Paragraph::new(format!("{}", status))
+                        .block(Block::default()
+                            .borders(Borders::TOP)
+                            .border_style(Style::new().blue()));
+
+                let motion = Paragraph::new(format!("{}", motion_str))
+                    .block(Block::default()
+                           .borders(Borders::TOP)
+                           .border_style(Style::new().blue()))
+                    .alignment(Alignment::Center);
                 (status, Some(motion))
             },
             Mode::Command => {
@@ -158,17 +170,16 @@ impl Editor {
      * empty will pretty much be same as file, will need modifications for saving
     */
     pub fn key_press(&mut self, key: KeyEvent){
-        match current_buf!(self).b_type {
+        match current_buf!(self).buffer_type {
             BufferType::Directory => self.directory_key_press(key),
             BufferType::File => self.file_key_press(key),
-            BufferType::Empty => {}, // FIX: add same to file
+            BufferType::Empty => {}, // FIX: add same to file, does nothing because saving not implemented
         }
     }
 
     // TODO: create function for handling commands so that they aren't handled in these functions
     // add permission checks to buffers when saving
     fn directory_key_press(&mut self, key: KeyEvent){
-        // only have command and normal mode
         match current_buf!(self).mode {
             Mode::Command => self.command_line_key(key),
             Mode::Normal => {
@@ -176,6 +187,11 @@ impl Editor {
                 // TODO: change this impl to work with opening buffers and such
                 // will have to create functions to handle operations
                 match key.code {
+                    KeyCode::Enter => {
+                        // open file/directory
+                        let file_name = current_buf!(self).get_hover_file();
+                        self.send(format!("Opening {file_name}"));
+                    },
                     KeyCode::Char(value) => {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             self.motion.clear();
@@ -184,6 +200,8 @@ impl Editor {
 
                             match res {
                                 Some(_) => {
+                                    // maybe will use, maybe not, whos to say
+                                    //let _ = self.direc_parse();
                                     let _ = self.parse();
                                     self.motion.clear();
                                 },
@@ -258,8 +276,10 @@ impl Editor {
     }
     
     // NOTE: not specifically for inserting a key, but key handling in insert mode
+    //
+    // TODO: figure out what this is for
     pub fn insert_key(&mut self, key: KeyEvent) {
-        match &current_buf!(self).b_type {
+        match &current_buf!(self).buffer_type {
             BufferType::Directory => {
                 current_buf!(self).insert_key_dir(key);
             },
@@ -329,6 +349,11 @@ impl Editor {
             }
         }
 
+        Ok(0)
+    }
+
+    // FIX: might not be great
+    pub fn direc_parse(&mut self) -> Result<u32, &str> {
         Ok(0)
     }
 
@@ -444,13 +469,8 @@ impl Editor {
                 self.next_buf();
             },
             Err(_) => {
-                // log out error to udp socket
-                match &self.logger {
-                    Some(socket) => {
-                        let _ = socket.send(b"Can't make buffer");
-                    },
-                    None => {}
-                }
+                // log out error to tcp logger
+                self.send("Can't make buffer".to_string());
             },
         }
     }
@@ -512,11 +532,13 @@ impl Editor {
     }
 
     // NOTE: functions for logging
-    pub fn send(&self, message: String){
-        let _output = {
-            match &self.logger {
-                Some(socket) => {
-                    let _ = socket.send(message.as_bytes());
+    //
+    // FIX: THIS MESS
+    pub fn send(&mut self, message: String){
+        let _ = {
+            match &mut self.logger {
+                Some(stream) => {
+                    let _ = stream.write(message.as_bytes());
                 },
                 None => {}
             }
