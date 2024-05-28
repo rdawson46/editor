@@ -34,16 +34,6 @@ impl Cursor{
     }
 }
 
-pub struct Line{
-    pub text: Box<String>,
-    pub length: u16
-}
-
-// fields will be added later
-pub struct Lines{
-    pub lines: Vec<Line>
-}
-
 pub struct Editor {
     pub buffers: Vec<Buffer>,
     pub buf_ptr: usize,
@@ -293,6 +283,10 @@ impl Editor {
 
     // TODO: needs to recalculate the viewpoint, won't be too bad
     pub fn go_to_line(&mut self, index: usize) {
+        if index == 0 {
+            return
+        }
+
         let index = index - 1;
         if index < current_buf!(self).lines.lines.len() {
             current_buf!(self).cursor.current.0 = index as u16;

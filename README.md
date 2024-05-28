@@ -10,10 +10,11 @@ This branch is functionally different than main:
 
 ## Todo
 * impl ropes into system
-    * add functions for inserting and fetching at indexed
-    * first impl in background and do testing to check for consistency
-* clearing sys messages
+    * impl Ropey
 * improve directory buffer events
+    * added better pathing for nesting dirs
+* improve error handling
+* clearing sys messages
 * add syntax highlighting with tree-sitter
     * add basic color schemes
 * work out messages not displaying and clearing

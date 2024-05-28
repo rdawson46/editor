@@ -1,14 +1,19 @@
 use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
-use crossterm::event::{read, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs::{File, read_dir};
 use std::io::{BufReader, BufRead};
-use crate::editor::{Cursor, Lines, Line, Mode};
+use crate::editor::{Cursor, Mode};
 use crossterm::{cursor, execute};
 use crate::word::{
     find_word_end_forward,
     find_word_start_forward,
     find_word_start_backward
+};
+use ropey::{
+    Rope,
+    RopeSlice,
+    RopeBuilder,
 };
 
 #[derive(PartialEq)]
@@ -16,6 +21,18 @@ pub enum BufferType {
     Empty,
     Directory,
     File
+}
+
+// who put this in a box
+pub struct Line{
+    pub text: String,
+    pub length: u16,
+}
+
+// fields will be added later
+pub struct Lines{
+    pub lines: Vec<Line>,
+    pub rope: Rope,
 }
 
 // TODO: might need to add a variable for pathing
@@ -34,6 +51,7 @@ impl Buffer {
     pub fn new(path: &Path) -> Result<Buffer> {
         let btype: BufferType;
         let mut lines: Lines;
+        let mut rb = RopeBuilder::new();
         let mut file_path: Option<PathBuf> = None;
 
         if path.exists() {
@@ -50,34 +68,40 @@ impl Buffer {
                         match line {
                             Ok(text) => {
                                 let length: u16 = text.len().try_into().unwrap();
-                                let boxed_text = Box::new(text);
                                 file_lines.push( Line {
-                                    text: boxed_text,
+                                    text: text.clone(),
                                     length
                                 });
+
+                                rb.append(&text);
                             },
                             Err(_) => {}
                         }
                     }
 
-                    lines = Lines { lines: file_lines };
+                    // TODO: impl ropes
+                    lines = Lines { lines: file_lines, rope: rb.finish() };
                     file_path = Some(path.to_owned());
                 } else {
+                    // FIX: remove this panic
                     panic!("couldn't open file")
                 }
 
             } else if path.is_dir() {
                 btype = BufferType::Directory;
-                lines = Lines { lines: vec![] };
+                // TODO: impl ropes
+                lines = Lines { lines: vec![], rope: Rope::new() };
 
                 let self_dot = String::from(".");
                 let parent_dot = String::from("..");
 
-                let line: Line = Line { text: Box::new(self_dot.clone()), length: self_dot.len() as u16 };
+                let line: Line = Line { text: self_dot.clone(), length: self_dot.len() as u16 };
                 lines.lines.push(line);
+                lines.rope.append(".\n".into());
 
-                let line: Line = Line { text: Box::new(parent_dot.clone()), length: parent_dot.len() as u16 };
+                let line: Line = Line { text: parent_dot.clone(), length: parent_dot.len() as u16 };
                 lines.lines.push(line);
+                lines.rope.append("..\n".into());
 
 
                 let reader = read_dir(path).unwrap();
@@ -86,15 +110,17 @@ impl Buffer {
                     let path = path.unwrap().file_name().into_string().unwrap();
                     let len = path.len();
 
-                    let line: Line = Line { text: Box::new(path), length: len as u16 };
+                    let line: Line = Line { text: path.clone(), length: len as u16 };
                     lines.lines.push(line);
+                    lines.rope.append(path.into());
                 }
             } else {
                 panic!("no thank you");
             }
         } else {
             btype = BufferType::Empty;
-            lines = Lines { lines: vec![] }
+            // TODO: impl ropes
+            lines = Lines { lines: vec![], rope: Rope::new() }
         }
 
         return Ok(Buffer {
@@ -182,7 +208,7 @@ impl Buffer {
 
                 let len: u16 = new_str.len() as u16;
 
-                let new_line: Line = Line { text: Box::new(new_str), length: len };
+                let new_line: Line = Line { text: new_str, length: len };
 
                 self.lines.lines.insert(curr_line + 1, new_line);
                 self.move_down(size);
@@ -213,7 +239,7 @@ impl Buffer {
                     self.lines.lines.remove(line_index);
                     let line_above = self.lines.lines.get_mut(line_index-1).unwrap();
 
-                    line_above.text = Box::new(format!("{}{}", *line_above.text, &text));
+                    line_above.text = format!("{}{}", line_above.text, &text);
                     line_above.length = line_above.text.len().try_into().unwrap();
                 }
             },
@@ -390,7 +416,7 @@ impl Buffer {
     pub fn new_line_above(&mut self) {
         let current = self.ptr_y + self.cursor.current.1;
         // current = current.checked_sub(1).unwrap_or(0);
-        let new_line = Line { text: Box::new("".to_string()), length: 0 };
+        let new_line = Line { text: "".to_string(), length: 0 };
         self.lines.lines.insert(current.into(), new_line);
         self.change_mode(Mode::Insert);
     }
@@ -398,7 +424,7 @@ impl Buffer {
     pub fn new_line_below(&mut self, size: (u16, u16)) {
         let mut current = self.ptr_y + self.cursor.current.1;
         current = current.checked_add(1).unwrap_or(u16::MAX);
-        let new_line = Line { text: Box::new("".to_string()), length: 0 };
+        let new_line = Line { text: "".to_string(), length: 0 };
         self.lines.lines.insert(current.into(), new_line);
         self.move_down(size);
         self.change_mode(Mode::Insert);
@@ -420,13 +446,15 @@ impl Buffer {
         let res = &self.open(&file_name);
 
         if let Ok(_) = res {
-            return *file_name;
+            return file_name;
         }
 
         return "could not open file".to_string();
     }
 
     // TODO: grab current path and then join with new name 
+    // impl as own function when making new buffer
+    // ropes not impled here
     pub fn open(&mut self, name: &String) -> std::io::Result<()>{
         // convert name to relative path
         // check file vs dir
@@ -447,15 +475,15 @@ impl Buffer {
                 for line in reader.lines() {
                     if let Ok(text) = line {
                         let length: u16 = text.len().try_into().unwrap();
-                        let boxed_text = Box::new(text);
                         file_lines.push(Line {
-                            text: boxed_text,
+                            text,
                             length
                         });
                     }
                 }
 
-                self.lines = Lines { lines: file_lines };
+                // TODO: impl ropes
+                self.lines = Lines { lines: file_lines, rope: Rope::new() };
                 self.file = Some(path.to_owned());
             }
         } else if path.is_dir() {

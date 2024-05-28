@@ -2,7 +2,6 @@
 mod test;
 
 mod editor;
-mod rope;
 mod motion;
 mod command;
 mod ui;
