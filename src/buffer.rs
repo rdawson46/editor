@@ -10,11 +10,21 @@ use crate::word::{
     find_word_start_forward,
     find_word_start_backward
 };
-use ropey::{
-    Rope,
-    RopeSlice,
-    RopeBuilder,
-};
+use ropey::Rope;
+
+/*
+
+=== GETTING ROPES WORKING ===
+ . get UI working
+ 2. get movements working again
+ 3. get text insertion and deletion working
+ 4. get jump to line working
+ 5. getting saving and actions working
+ 6. open function
+ 7. opening directories
+=============================
+*/
+
 
 #[derive(PartialEq)]
 pub enum BufferType {
@@ -23,15 +33,8 @@ pub enum BufferType {
     File
 }
 
-// who put this in a box
-pub struct Line{
-    pub text: String,
-    pub length: u16,
-}
-
 // fields will be added later
 pub struct Lines{
-    pub lines: Vec<Line>,
     pub rope: Rope,
 }
 
@@ -40,8 +43,8 @@ pub struct Lines{
 pub struct Buffer {
     pub buffer_type: BufferType,
     pub lines: Lines,
-    pub ptr_y: u16,
-    pub ptr_x: u16,
+    pub ptr_y: usize,
+    pub ptr_x: usize,
     pub cursor: Cursor,
     pub file: Option<PathBuf>,
     pub mode: Mode
@@ -51,56 +54,26 @@ impl Buffer {
     pub fn new(path: &Path) -> Result<Buffer> {
         let btype: BufferType;
         let mut lines: Lines;
-        let mut rb = RopeBuilder::new();
+        // let mut rb = RopeBuilder::new();
         let mut file_path: Option<PathBuf> = None;
 
         if path.exists() {
             if path.is_file() {
-                let file = File::open(&path);
-
-                if let Ok(file) = file {
-                    let reader = BufReader::new(file);
-                    btype = BufferType::File;
-
-                    let mut file_lines: Vec<Line> = vec![];
-
-                    for line in reader.lines() {
-                        match line {
-                            Ok(text) => {
-                                let length: u16 = text.len().try_into().unwrap();
-                                file_lines.push( Line {
-                                    text: text.clone(),
-                                    length
-                                });
-
-                                rb.append(&text);
-                            },
-                            Err(_) => {}
-                        }
-                    }
-
-                    // TODO: impl ropes
-                    lines = Lines { lines: file_lines, rope: rb.finish() };
-                    file_path = Some(path.to_owned());
-                } else {
-                    // FIX: remove this panic
-                    panic!("couldn't open file")
-                }
-
+                let rope = Rope::from_reader(
+                    File::open(&path)?
+                )?;
+                lines = Lines { rope };
+                file_path = Some(path.to_owned());
+                btype = BufferType::File;
             } else if path.is_dir() {
                 btype = BufferType::Directory;
                 // TODO: impl ropes
-                lines = Lines { lines: vec![], rope: Rope::new() };
+                lines = Lines { rope: Rope::new() };
 
-                let self_dot = String::from(".");
-                let parent_dot = String::from("..");
+                // let self_dot = String::from(".");
+                // let parent_dot = String::from("..");
 
-                let line: Line = Line { text: self_dot.clone(), length: self_dot.len() as u16 };
-                lines.lines.push(line);
                 lines.rope.append(".\n".into());
-
-                let line: Line = Line { text: parent_dot.clone(), length: parent_dot.len() as u16 };
-                lines.lines.push(line);
                 lines.rope.append("..\n".into());
 
 
@@ -108,10 +81,8 @@ impl Buffer {
 
                 for path in reader {
                     let path = path.unwrap().file_name().into_string().unwrap();
-                    let len = path.len();
+                    // let len = path.len();
 
-                    let line: Line = Line { text: path.clone(), length: len as u16 };
-                    lines.lines.push(line);
                     lines.rope.append(path.into());
                 }
             } else {
@@ -120,7 +91,7 @@ impl Buffer {
         } else {
             btype = BufferType::Empty;
             // TODO: impl ropes
-            lines = Lines { lines: vec![], rope: Rope::new() }
+            lines = Lines { rope: Rope::new() }
         }
 
         return Ok(Buffer {
@@ -154,11 +125,13 @@ impl Buffer {
                 // recalc cursor pos
                 // get current pos, compare to line length
 
-                let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+                // let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+                let line_len = self.lines.rope.get_line(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().len_chars();
                 
                 if line_len == 0 {
                     self.cursor.current.0 = 0;
                 } else {
+                    //let x = std::cmp::min(self.cursor.current.0, line_len - 1);
                     let x = std::cmp::min(self.cursor.current.0, line_len - 1);
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
@@ -181,25 +154,13 @@ impl Buffer {
                 if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                     self.change_mode(Mode::Normal);
                 } else {
-                    // get current line
-                    let line_index = usize::from(self.ptr_y + self.cursor.current.1);
-
-                    let current_line = &mut self.lines.lines[line_index];
-                    let text = &mut current_line.text;
-
-                    let text_index = usize::from(self.cursor.current.0);
-
-                    if current_line.length == 0 {
-                        text.push(value);
-                    } else {
-                        text.insert(text_index, value);
-                    }
-
-                    current_line.length += 1;
+                    let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
+                    self.lines.rope.insert_char(line_idx + self.ptr_x + self.cursor.current.0, value);
                     self.move_right();
                 }
             },
             KeyCode::Enter => {
+                /*
                 let curr_line = usize::from(self.ptr_y + self.cursor.current.1);
 
                 let curr_index = usize::from(self.cursor.current.0);
@@ -214,8 +175,14 @@ impl Buffer {
                 self.move_down(size);
                 self.cursor.current.0 = 0;
                 self.cursor.possible.0 = 0;
+                */
+
+                // get current line index, append new line after
+                let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
+                self.lines.rope.insert_char(line_idx + self.lines.rope.get_line(line_idx).unwrap().len_chars(), '\n');
             },
             KeyCode::Backspace => {
+                /*
                 let line_index = usize::from(self.ptr_y + self.cursor.current.1);
 
                 let current_line = &mut self.lines.lines[line_index];
@@ -242,6 +209,14 @@ impl Buffer {
                     line_above.text = format!("{}{}", line_above.text, &text);
                     line_above.length = line_above.text.len().try_into().unwrap();
                 }
+                */
+
+                // remove at current idx
+                // get cur indx
+                let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
+                let curr_idx = line_idx + self.lines.rope.line(line_idx).len_chars();
+
+                self.lines.rope.remove(curr_idx..curr_idx+1);
             },
             KeyCode::Tab => {},
             KeyCode::Esc => {
@@ -253,6 +228,7 @@ impl Buffer {
 
     pub fn move_down(&mut self, size: (u16, u16)) {
         // next logical y
+        /*
         let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
 
         if y > size.1.checked_sub(1).unwrap_or(0) {
@@ -282,9 +258,17 @@ impl Buffer {
             let x = std::cmp::min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
+        */
+
+        // goal: move cursor down 
+        // check if in if in range of file length
+        // check if cursor needs moved or if screen needs moved
+        // remember to set horizontal value of cursor
+
     }
 
     pub fn move_up(&mut self) {
+        /*
         if self.cursor.current.1 == 0 && self.ptr_y != 0 {
             self.ptr_y -= 1;
             return;
@@ -301,12 +285,14 @@ impl Buffer {
             let x = std::cmp::min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
+        */
     }
 
     
 
     // TODO: cursor movement when in command mode
     pub fn move_right(&mut self) {
+        /*
         // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
         let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
         if line_len == 0 {
@@ -332,15 +318,19 @@ impl Buffer {
                 }
             }
         }
+        */
     }
 
     pub fn move_left(&mut self) {
+        /*
         let x = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0 + self.ptr_y);
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
+        */
     }
 
     pub fn move_end_of_line(&mut self) {
+        /*
         let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
         if line_len == 0 {
             self.cursor.current.0 = 0;
@@ -358,16 +348,20 @@ impl Buffer {
             },
             Mode::Command => {}
         }
+        */
     }
 
     // TODO: implemet this function
     pub fn move_begin_of_line(&mut self){
+        /*
         self.cursor.current.0 = 0;
         self.cursor.possible.0 = 0;
+        */
     }
 
     // TODO: make work with going to next line
     pub fn move_next_word(&mut self) {
+        /*
         // conversion
         let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
 
@@ -385,9 +379,11 @@ impl Buffer {
             },
             None => {}
         }
+        */
     }
 
     pub fn move_end_word(&mut self) {
+        /*
         let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
         let start_col = usize::from(self.cursor.current.0);
         let next = find_word_end_forward(line, start_col);
@@ -398,9 +394,11 @@ impl Buffer {
             },
             None => {}
         }
+        */
     }
 
     pub fn move_back_word(&mut self) {
+        /*
         let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
         let start_col = usize::from(self.cursor.current.0);
         let next = find_word_start_backward(line, start_col);
@@ -411,23 +409,28 @@ impl Buffer {
             },
             None => {}
         }
+        */
     }
 
     pub fn new_line_above(&mut self) {
+        /*
         let current = self.ptr_y + self.cursor.current.1;
         // current = current.checked_sub(1).unwrap_or(0);
         let new_line = Line { text: "".to_string(), length: 0 };
         self.lines.lines.insert(current.into(), new_line);
         self.change_mode(Mode::Insert);
+        */
     }
 
     pub fn new_line_below(&mut self, size: (u16, u16)) {
+        /*
         let mut current = self.ptr_y + self.cursor.current.1;
         current = current.checked_add(1).unwrap_or(u16::MAX);
         let new_line = Line { text: "".to_string(), length: 0 };
         self.lines.lines.insert(current.into(), new_line);
         self.move_down(size);
         self.change_mode(Mode::Insert);
+        */
     }
 
     // open file/dir under the cusor in dir menu and replace it in the current buffer
@@ -439,6 +442,7 @@ impl Buffer {
         // open
         // refresh buffer
 
+        /*
         let line_index = usize::from(self.ptr_y + self.cursor.current.1);
         let current_line = &self.lines.lines[line_index];
         let file_name = current_line.text.clone();
@@ -450,12 +454,15 @@ impl Buffer {
         }
 
         return "could not open file".to_string();
+        */
+        "".to_string()
     }
 
     // TODO: grab current path and then join with new name 
     // impl as own function when making new buffer
     // ropes not impled here
     pub fn open(&mut self, name: &String) -> std::io::Result<()>{
+        /*
         // convert name to relative path
         // check file vs dir
         // open and return
@@ -495,6 +502,7 @@ impl Buffer {
 
         self.refresh_buffer();
 
+        */
         Ok(())
     }
 
@@ -506,6 +514,7 @@ impl Buffer {
     }
 
     pub fn save(&self) -> String {
+        /*
         if self.buffer_type == BufferType::File {
             let mut total_string = "".to_string();
 
@@ -530,5 +539,7 @@ impl Buffer {
         } else {
             return String::from("Can't write to directory")
         }
+        */
+        "".to_string()
     }
 }

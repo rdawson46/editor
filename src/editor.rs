@@ -24,8 +24,8 @@ pub enum Mode{
 }
 
 pub struct Cursor{
-    pub current: (u16, u16),
-    pub possible: (u16, u16)
+    pub current: (usize, usize),
+    pub possible: (usize, usize)
 }
 
 impl Cursor{
@@ -283,15 +283,17 @@ impl Editor {
 
     // TODO: needs to recalculate the viewpoint, won't be too bad
     pub fn go_to_line(&mut self, index: usize) {
+        /* FIX: impl this for rope
         if index == 0 {
             return
         }
 
         let index = index - 1;
         if index < current_buf!(self).lines.lines.len() {
-            current_buf!(self).cursor.current.0 = index as u16;
-            current_buf!(self).cursor.current.1 = index as u16;
+            current_buf!(self).cursor.current.0 = index;
+            current_buf!(self).cursor.current.1 = index;
         } 
+        */
     }
 
 

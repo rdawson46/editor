@@ -11,6 +11,8 @@ This branch is functionally different than main:
 ## Todo
 * impl ropes into system
     * impl Ropey
+        * impl movement in buffer
+        * buffer saving and other actions
 * improve directory buffer events
     * added better pathing for nesting dirs
 * improve error handling

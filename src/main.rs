@@ -21,7 +21,7 @@ use crate::ui::{ui, update};
 use color_eyre::eyre::Result;
 
 
-static X_OFFSET: u16 = 5;
+static X_OFFSET: usize = 5;
 
 
 async fn run() -> Result<()> {
@@ -47,7 +47,10 @@ async fn run() -> Result<()> {
                 tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
             },
             _ => {
-                tui.terminal.set_cursor(editor.buffers[editor.buf_ptr].cursor.current.0 + X_OFFSET, editor.buffers[editor.buf_ptr].cursor.current.1)?;
+                tui.terminal.set_cursor(
+                    (editor.buffers[editor.buf_ptr].cursor.current.0 + X_OFFSET).try_into().unwrap(),
+                    (editor.buffers[editor.buf_ptr].cursor.current.1).try_into().unwrap()
+                )?;
             }
         };
 

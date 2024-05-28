@@ -10,6 +10,13 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph},
     Frame,
 };
+// TODO: remove this if not needed
+/*
+use ropey::{
+    Rope,
+    RopeSlice,
+};
+*/
 
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
@@ -26,7 +33,7 @@ fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     let num_text_layout = Layout::default()
         .direction(Direction::Horizontal)
         .constraints(vec![
-                     Constraint::Length(X_OFFSET - 1),
+                     Constraint::Length((X_OFFSET - 1).try_into().unwrap()),
                      Constraint::Min(1)
         ])
         .split(wrapper_layout[0]);
@@ -45,6 +52,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let mut line_nums = "".to_string();
     let mut text_string = "".to_string();
 
+    /* setting line test and line number
     for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
         if i > usize::from(editor.buffers[editor.buf_ptr].ptr_y + editor.size.1) {
             break;
@@ -79,6 +87,46 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
         text_string.push('\r');
         text_string.push('\n');
+    }
+    */
+
+    editor.send(format!("Line nums: {}", editor.buffers[editor.buf_ptr].lines.rope.len_lines()));
+
+    // for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
+    for (i, line) in editor.buffers[editor.buf_ptr].lines.rope.lines().skip(editor.buffers[editor.buf_ptr].ptr_y).enumerate() {
+        if i > editor.buffers[editor.buf_ptr].ptr_y + usize::from(editor.size.1) {
+            break;
+        }
+
+        let mut i_str: String;
+        let current_line = usize::from(editor.buffers[editor.buf_ptr].cursor.current.1);
+
+        if current_line != i {
+            if current_line > i {
+                i_str = (current_line - i).to_string();
+            } else{
+                i_str = (i - current_line).to_string();
+            }
+
+        } else {
+            i_str = (editor.buffers[editor.buf_ptr].ptr_y + editor.buffers[editor.buf_ptr].cursor.current.1 + 1).to_string();
+            if i_str.len() <= 2 {
+                i_str.push(' ');
+            }
+        }
+
+        i_str.push_str("\n\r");
+
+        for char in i_str.chars() {
+            line_nums.push(char);
+        }
+
+        for char in line.chars() {
+            text_string.push(char);
+        }
+
+        //text_string.push('\r');
+        //text_string.push('\n');
     }
 
     let (status, motion) = editor.mode_display();
