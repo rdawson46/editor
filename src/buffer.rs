@@ -2,31 +2,39 @@ use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs::{File, read_dir};
-use std::io::{BufReader, BufRead};
+// use std::io::{BufReader, BufRead};
 use crate::editor::{Cursor, Mode};
 use crossterm::{cursor, execute};
+/*
 use crate::word::{
     find_word_end_forward,
     find_word_start_forward,
     find_word_start_backward
 };
+*/
 use ropey::Rope;
 
 /*
 
 === GETTING ROPES WORKING ===
    get UI working
- 2. get movements working again 
-    * down 
-    * up 
-    * left 
-    * rigt 
- 3. get text insertion and deletion working
- 4. get jump to line working
- 5. getting saving and actions working
- 6. open function
- 7. opening directories
- 8. remove any unused imports
+   get movements working again
+        * down 
+        * up 
+        * left 
+        * rigt 
+        * end of line 
+   get text insertion and deletion working
+        * Insertion 
+            * new line (creation) 
+        * deletion 
+            * new (deletion) 
+ ~  get jump to line working, in editor.rs
+ 5. move_to functions
+ 6. getting saving and actions working
+ 7. open function
+ 8. opening directories
+ 9. remove any unused imports
 =============================
 
 */
@@ -60,7 +68,6 @@ impl Buffer {
     pub fn new(path: &Path) -> Result<Buffer> {
         let btype: BufferType;
         let mut lines: Lines;
-        // let mut rb = RopeBuilder::new();
         let mut file_path: Option<PathBuf> = None;
 
         if path.exists() {
@@ -133,21 +140,24 @@ impl Buffer {
             Mode::Normal => {
                 // recalc cursor pos
                 // get current pos, compare to line length
+                let slice = self.lines.rope.get_line(usize::from(self.cursor.current.1 + self.ptr_y));
 
-                // let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-                let line_len = self.lines.rope.get_line(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().len_chars();
+                if let Some(slice) = slice {
+                    let line_len = slice.len_chars();
+
+                    if line_len == 0 {
+                        self.cursor.current.0 = 0;
+                    } else {
+                        //let x = std::cmp::min(self.cursor.current.0, line_len - 1);
+                        let x = std::cmp::min(self.cursor.current.0, line_len - 1);
+                        self.cursor.current.0 = x;
+                        self.cursor.possible.0 = x;
+                    };
+
+                    execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
+                    self.mode = mode;
+                }
                 
-                if line_len == 0 {
-                    self.cursor.current.0 = 0;
-                } else {
-                    //let x = std::cmp::min(self.cursor.current.0, line_len - 1);
-                    let x = std::cmp::min(self.cursor.current.0, line_len - 1);
-                    self.cursor.current.0 = x;
-                    self.cursor.possible.0 = x;
-                };
-
-                execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
-                self.mode = mode;
             },
         }
     }
@@ -163,9 +173,15 @@ impl Buffer {
                 if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                     self.change_mode(Mode::Normal);
                 } else {
-                    let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
-                    self.lines.rope.insert_char(line_idx + self.ptr_x + self.cursor.current.0, value);
-                    self.move_right();
+                    // inserting char into line
+                    let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
+
+                    if let Ok(line_idx) = line_idx {
+                        let res = self.lines.rope.try_insert_char(line_idx + self.ptr_x + self.cursor.current.0, value);
+                        if let Ok(_) = res {
+                            self.move_right();
+                        }
+                    }
                 }
             },
             KeyCode::Enter => {
@@ -187,8 +203,10 @@ impl Buffer {
                 */
 
                 // get current line index, append new line after
+
+                // FIX: this breaks
                 let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
-                self.lines.rope.insert_char(line_idx + self.lines.rope.get_line(line_idx).unwrap().len_chars(), '\n');
+                self.lines.rope.insert_char(line_idx + self.cursor.current.0 + self.ptr_y, '\n');
                 self.move_down(size);
                 self.cursor.current.0 = 0;
                 self.cursor.possible.0 = 0;
@@ -223,13 +241,34 @@ impl Buffer {
                 }
                 */
 
-                // remove at current idx
+                // remove at current idx - 1
                 // get cur indx
-                let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
-                let curr_idx = line_idx + self.lines.rope.line(line_idx).len_chars();
+                // VERY BAD
+                // remember to move cursor
+                let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
 
-                self.lines.rope.remove(curr_idx..curr_idx+1);
-                // FIX: move cursor if necessary
+                if let Ok(line_idx) = line_idx {
+                    // should be safe
+                    // let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
+                    // wonky
+                    // why "- 1"
+                    let local_idx = self.cursor.current.0 + self.ptr_x;
+                    let curr_idx = line_idx + local_idx;
+
+                    if curr_idx <= 0 {
+                        return;
+                    }
+                    
+                    if local_idx == 0 {
+                        // move up and end of line
+                        self.move_up();
+                        self.move_end_of_line()
+                    } else {
+                        self.move_left();
+                    }
+                    
+                    let _ = self.lines.rope.try_remove(curr_idx-1..curr_idx);
+                }
             },
             KeyCode::Tab => {
                 // TODO: append tab
@@ -325,25 +364,30 @@ impl Buffer {
     }
 
     pub fn move_end_of_line(&mut self) {
-        /*
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-        if line_len == 0 {
-            self.cursor.current.0 = 0;
-            return;
+        // let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+        // let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
+        let slice = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y);
+
+        if let Some(slice) = slice {
+            let line_len = slice.len_chars() - 1;
+            if line_len == 0 {
+                self.cursor.current.0 = 0;
+                return;
+            }
+
+            match &self.mode {
+                Mode::Normal => {
+                    self.cursor.current.0 = line_len - 1;
+                    self.cursor.possible.0 = line_len - 1;
+                },
+                Mode::Insert => {
+                    self.cursor.current.0 = line_len;
+                    self.cursor.possible.0 = line_len;
+                },
+                Mode::Command => {}
+            }
         }
 
-        match &self.mode {
-            Mode::Normal => {
-                self.cursor.current.0 = line_len - 1;
-                self.cursor.possible.0 = line_len - 1;
-            },
-            Mode::Insert => {
-                self.cursor.current.0 = line_len;
-                self.cursor.possible.0 = line_len;
-            },
-            Mode::Command => {}
-        }
-        */
     }
 
     // TODO: implemet this function

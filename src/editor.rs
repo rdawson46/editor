@@ -281,19 +281,32 @@ impl Editor {
 
     // NOTE: word movements
 
-    // TODO: needs to recalculate the viewpoint, won't be too bad
-    pub fn go_to_line(&mut self, index: usize) {
-        /* FIX: impl this for rope
-        if index == 0 {
-            return
-        }
+    // TODO: needs to recalculate the viewpoint
+    pub fn go_to_line(&mut self, line_idx: usize) {
+        // adjust for 0 indexing
+        let line_idx = line_idx.checked_sub(1).unwrap_or(0);
 
-        let index = index - 1;
-        if index < current_buf!(self).lines.lines.len() {
-            current_buf!(self).cursor.current.0 = index;
-            current_buf!(self).cursor.current.1 = index;
-        } 
-        */
+        let slice = current_buf!(self).lines.rope.get_line(line_idx);
+
+        if let Some(_slice) = slice {
+            // move to that line, move cursor.y and ptr_y correctly
+            current_buf!(self).cursor.current.0 = 0;
+            current_buf!(self).cursor.current.1 = 0;
+            current_buf!(self).ptr_y = 0;
+
+            if line_idx > self.size.1.into() {
+                // account for UI
+                current_buf!(self).cursor.current.1 = self.size.1.into();
+                current_buf!(self).cursor.current.1.checked_sub(3).unwrap_or(0);
+                current_buf!(self).ptr_y = line_idx.checked_sub(self.size.1.into()).unwrap_or(0) + 3;
+            } else {
+                current_buf!(self).cursor.current.1 = line_idx;
+            }
+
+            // update cursor x accordingly
+            // FIX: temp solution
+            current_buf!(self).cursor.current.0 = 0;
+        }
     }
 
 
