@@ -10,13 +10,6 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph},
     Frame,
 };
-// TODO: remove this if not needed
-/*
-use ropey::{
-    Rope,
-    RopeSlice,
-};
-*/
 
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
@@ -42,7 +35,6 @@ fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
 }
 
 
-
 pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let (wrapper_layout, num_text_layout) = get_layouts(f);
     
@@ -52,49 +44,13 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let mut line_nums = "".to_string();
     let mut text_string = "".to_string();
 
-    /* setting line test and line number
-    for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
-        if i > usize::from(editor.buffers[editor.buf_ptr].ptr_y + editor.size.1) {
-            break;
-        }
-
-        let mut i_str: String;
-        let current_line = usize::from(editor.buffers[editor.buf_ptr].cursor.current.1);
-
-        if current_line != i {
-            if current_line > i {
-                i_str = (current_line - i).to_string();
-            } else{
-                i_str = (i - current_line).to_string();
-            }
-
-        } else {
-            i_str = (editor.buffers[editor.buf_ptr].ptr_y + editor.buffers[editor.buf_ptr].cursor.current.1 + 1).to_string();
-            if i_str.len() <= 2 {
-                i_str.push(' ');
-            }
-        }
-
-        i_str.push_str("\n\r");
-
-        for char in i_str.chars() {
-            line_nums.push(char);
-        }
-
-        for char in line.text.chars() {
-            text_string.push(char);
-        }
-
-        text_string.push('\r');
-        text_string.push('\n');
-    }
-    */
-
-    editor.send(format!("Line nums: {}", editor.buffers[editor.buf_ptr].lines.rope.len_lines()));
-
     // for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
     for (i, line) in editor.buffers[editor.buf_ptr].lines.rope.lines().skip(editor.buffers[editor.buf_ptr].ptr_y).enumerate() {
         if i > editor.buffers[editor.buf_ptr].ptr_y + usize::from(editor.size.1) {
+            break;
+        }
+
+        if i == editor.buffers[editor.buf_ptr].lines.rope.len_lines() - 1 {
             break;
         }
 
@@ -124,9 +80,6 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         for char in line.chars() {
             text_string.push(char);
         }
-
-        //text_string.push('\r');
-        //text_string.push('\n');
     }
 
     let (status, motion) = editor.mode_display();
@@ -181,133 +134,3 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         },
     }
 }
-/*
-pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
-    match event {
-        Event::Init => {},
-        Event::Quit => {},
-        Event::Error => {},
-        Event::Closed => {},
-        Event::Tick => {},
-        Event::Render => {},
-        Event::FocusGained => {},
-        Event::FocusLost => {},
-        Event::Paste(_) => {},
-        Event::Key(key) => {
-
-            // TODO: add movable cursor with arrow keys
-            match editor.buffers[editor.buf_ptr].mode {
-                Mode::Insert => {
-                    editor.insert_key(key);
-                },
-
-                Mode::Command => {
-                    match key.code {
-                        KeyCode::Char(value) => {
-                            if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                                editor.change_mode(Mode::Normal);
-                            } else {
-                                editor.command.text.push(value);
-                            }
-                        },
-                        KeyCode::Esc => {
-                            editor.change_mode(Mode::Normal);
-                        }
-                        KeyCode::Enter => {
-                            let command = editor.command.confirm();
-
-                            match command {
-                                Some(command) => {
-                                    match command {
-                                        CommandKey::Save => editor.save(),
-                                        CommandKey::Quit => editor.should_quit = true,
-                                        CommandKey::Line(number) => {
-                                            editor.go_to_line(number);
-                                        },
-                                        CommandKey::SaveAndQuit => {
-                                            editor.save();
-                                            editor.should_quit = true;
-                                        },
-                                        CommandKey::History => todo!(),
-                                        CommandKey::Logger => {
-                                            // TODO: finish this up
-                                            let output = match &editor.logger {
-                                                Some(socket) => {
-                                                    let addr = socket.local_addr().unwrap().to_string();
-                                                    format!("Binded to {}", addr)
-                                                },
-                                                None => "Not Connected".to_string()
-                                            };
-                                            editor.message = Some(output);
-                                        },
-                                        CommandKey::Send(message) => {
-                                            // TODO: make function for sending
-                                            editor.send(message);
-                                        },
-                                        CommandKey::NextBuf => {
-                                            editor.next_buf();
-                                            editor.send(String::from(format!("buf: {}", editor.buf_ptr)));
-                                        },
-                                        CommandKey::PrevBuf => {
-                                            editor.prev_buf();
-                                            editor.send(String::from(format!("buf: {}", editor.buf_ptr)));
-                                        },
-                                        CommandKey::NewBuf => {
-                                            editor.send(String::from("New buffer"));
-                                            editor.new_buffer(std::path::Path::new("."));
-                                        },
-                                        CommandKey::BufCount => {
-                                            // sent message to count of opened buffers
-                                            let message = String::from(format!("{} open buffers", editor.buffers.len()));
-                                            editor.message = Some(message);
-                                        }
-                                    }
-                                },
-                                None => {}
-                            }
-                            editor.change_mode(Mode::Normal);
-                        },
-                        KeyCode::Backspace => {
-                            if editor.command.text.len() > 0 {
-                                // TODO: add movable cursor
-                                editor.command.text.pop();
-                            } else {
-                                editor.change_mode(Mode::Normal);
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-
-                Mode::Normal => {
-                    match key.code {
-                        KeyCode::Char(value) => {
-                            if value == 's' && key.modifiers == KeyModifiers::CONTROL {
-                                editor.save();
-                            } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                                editor.motion.clear();
-                            } else {
-
-                                let res = editor.motion.push(value);
-
-                                match res {
-                                    Some(_) => {
-                                        let _ = editor.parse();
-                                        editor.motion.clear();
-                                    },
-                                    None => {}
-                                }
-                            }
-                        },
-                        _ => {}
-                    }
-                },
-            }
-        },
-        Event::Mouse(_) => {},
-        Event::Resize(x, y) => {
-            tui.size = (x, y);
-        },
-    }
-}
-*/

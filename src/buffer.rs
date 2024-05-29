@@ -15,14 +15,20 @@ use ropey::Rope;
 /*
 
 === GETTING ROPES WORKING ===
- . get UI working
- 2. get movements working again
+   get UI working
+ 2. get movements working again 
+    * down 
+    * up 
+    * left 
+    * rigt 
  3. get text insertion and deletion working
  4. get jump to line working
  5. getting saving and actions working
  6. open function
  7. opening directories
+ 8. remove any unused imports
 =============================
+
 */
 
 
@@ -82,9 +88,12 @@ impl Buffer {
                 for path in reader {
                     let path = path.unwrap().file_name().into_string().unwrap();
                     // let len = path.len();
-
+                    let mut path = String::from(path);
+                    path.push_str("\n");
                     lines.rope.append(path.into());
                 }
+
+                lines.rope.remove(lines.rope.len_chars()-1..lines.rope.len_chars())
             } else {
                 panic!("no thank you");
             }
@@ -180,6 +189,9 @@ impl Buffer {
                 // get current line index, append new line after
                 let line_idx = self.lines.rope.line_to_byte(self.ptr_y + self.cursor.current.1);
                 self.lines.rope.insert_char(line_idx + self.lines.rope.get_line(line_idx).unwrap().len_chars(), '\n');
+                self.move_down(size);
+                self.cursor.current.0 = 0;
+                self.cursor.possible.0 = 0;
             },
             KeyCode::Backspace => {
                 /*
@@ -217,8 +229,11 @@ impl Buffer {
                 let curr_idx = line_idx + self.lines.rope.line(line_idx).len_chars();
 
                 self.lines.rope.remove(curr_idx..curr_idx+1);
+                // FIX: move cursor if necessary
             },
-            KeyCode::Tab => {},
+            KeyCode::Tab => {
+                // TODO: append tab
+            },
             KeyCode::Esc => {
                 self.change_mode(Mode::Normal);
             },
@@ -228,28 +243,22 @@ impl Buffer {
 
     pub fn move_down(&mut self, size: (u16, u16)) {
         // next logical y
-        /*
         let y = self.cursor.current.1.checked_add(1).unwrap_or(self.cursor.current.1);
 
-        if y > size.1.checked_sub(1).unwrap_or(0) {
-            if usize::from(size.1 + self.ptr_y) < self.lines.lines.len() {
+        if y > size.1.checked_sub(1).unwrap_or(0).into() {
+            if usize::from(size.1) + self.ptr_y < self.lines.rope.len_lines() - 1 {
                 self.ptr_y += 1;
             }
-            return;
+        } else {
+            // max lines in file
+            let line_nums = self.lines.rope.len_lines() - 2;
+            let cap = std::cmp::min(line_nums, usize::from(size.1 - 1) + self.ptr_y);
+            let y = std::cmp::min(y, cap.try_into().unwrap());
+            self.cursor.current.1 = y;
         }
 
-        // max lines in file
-        let line_nums = self.lines.lines.len() - 1;
-
-        
-        // NOTE: this line will be useless with pointer movement
-        let cap = std::cmp::min(line_nums, usize::from(self.ptr_y + size.1 - 1));
-        let y = std::cmp::min(y, cap.try_into().unwrap());
-
-        self.cursor.current.1 = y;
-
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-
+        // setting cursor x dimension
+        let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
 
         if line_len == 0 {
             self.cursor.current.0 = 0;
@@ -258,17 +267,9 @@ impl Buffer {
             let x = std::cmp::min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
-        */
-
-        // goal: move cursor down 
-        // check if in if in range of file length
-        // check if cursor needs moved or if screen needs moved
-        // remember to set horizontal value of cursor
-
     }
 
     pub fn move_up(&mut self) {
-        /*
         if self.cursor.current.1 == 0 && self.ptr_y != 0 {
             self.ptr_y -= 1;
             return;
@@ -276,7 +277,8 @@ impl Buffer {
 
         self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
 
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+        //let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+        let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars();
 
         if line_len == 0 {
             self.cursor.current.0 = 0;
@@ -285,16 +287,12 @@ impl Buffer {
             let x = std::cmp::min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
-        */
     }
-
-    
 
     // TODO: cursor movement when in command mode
     pub fn move_right(&mut self) {
-        /*
         // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-        let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
+        let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
         if line_len == 0 {
             self.cursor.current.0 = 0;
         } else{
@@ -318,15 +316,12 @@ impl Buffer {
                 }
             }
         }
-        */
     }
 
     pub fn move_left(&mut self) {
-        /*
         let x = self.cursor.current.0.checked_sub(1).unwrap_or(self.cursor.current.0 + self.ptr_y);
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
-        */
     }
 
     pub fn move_end_of_line(&mut self) {

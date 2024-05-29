@@ -1,12 +1,11 @@
 # Editor
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
-# Test Branch
-This branch is functionally different than main:
-    - better motions
-    - command buffer
-    - ability to use multiple buffers
-    - etc
+# Goal
+Make an editor that:
+* is a usable simple text editor
+* configurable
+* customizable
 
 ## Todo
 * impl ropes into system
@@ -22,6 +21,7 @@ This branch is functionally different than main:
 * work out messages not displaying and clearing
     * due to clearing message when changing mode
 * define runtime better for action (motions, commands, etc) handling
+* arrow key movement for buffer and command line
 * improve/fix testing suite
 * fix all todos and fixes in proj
 * add actions, like delete, to motions
