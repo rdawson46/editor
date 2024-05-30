@@ -33,7 +33,7 @@ pub fn find_word_start_forward(line: &String, start_col: usize) -> Option<usize>
 }
 
 pub fn find_word_end_forward(line: &String, start_col: usize) -> Option<usize> {
-    let mut it = line.chars().enumerate().skip(start_col);
+    let mut it = line.chars().enumerate().skip(start_col + 1);
     let mut prev = CharKind::new(it.next()?.1);
     for (col, c) in it {
         let cur = CharKind::new(c);

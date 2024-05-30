@@ -362,9 +362,11 @@ impl Editor {
     }
 
     // FIX: might not be great
+    /*
     pub fn direc_parse(&mut self) -> Result<u32, &str> {
         Ok(0)
     }
+    */
 
     pub fn handle_command(&mut self, command: Option<CommandKey>){
         match command {
@@ -434,14 +436,14 @@ impl Editor {
                 current_buf!(self).move_right();
             },
             "O" => {
-                current_buf!(self).new_line_above();
+                current_buf!(self).new_line_above(self.size);
             },
             "o" => {
                 current_buf!(self).new_line_below(self.size);
             },
-            "w" => current_buf!(self).move_next_word(),
-            "b" => current_buf!(self).move_back_word(),
-            "e" => current_buf!(self).move_end_word(),
+            "w" => current_buf!(self).move_next_word(self.size),
+            "b" => current_buf!(self).move_back_word(self.size),
+            "e" => current_buf!(self).move_end_word(self.size),
             "0" => current_buf!(self).move_begin_of_line(),
             "$" => current_buf!(self).move_end_of_line(),
             "I" => {

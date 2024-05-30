@@ -5,13 +5,11 @@ use std::fs::{File, read_dir};
 // use std::io::{BufReader, BufRead};
 use crate::editor::{Cursor, Mode};
 use crossterm::{cursor, execute};
-/*
 use crate::word::{
     find_word_end_forward,
     find_word_start_forward,
     find_word_start_backward
 };
-*/
 use ropey::Rope;
 
 /*
@@ -29,9 +27,17 @@ use ropey::Rope;
             * new line (creation) 
         * deletion 
             * new (deletion) 
- ~  get jump to line working, in editor.rs
- 5. move_to functions
- 6. getting saving and actions working
+   get jump to line working, in editor.rs
+        * general idea 
+        * always displays off screen ~
+   move_to functions
+        * working state 
+        * viewport calc 
+            * refresh view 
+ 6. getting saving and action functions
+        * new line above
+        * new line below
+        * save
  7. open function
  8. opening directories
  9. remove any unused imports
@@ -185,23 +191,6 @@ impl Buffer {
                 }
             },
             KeyCode::Enter => {
-                /*
-                let curr_line = usize::from(self.ptr_y + self.cursor.current.1);
-
-                let curr_index = usize::from(self.cursor.current.0);
-
-                let new_str = self.lines.lines[curr_line].text.split_off(curr_index);
-
-                let len: u16 = new_str.len() as u16;
-
-                let new_line: Line = Line { text: new_str, length: len };
-
-                self.lines.lines.insert(curr_line + 1, new_line);
-                self.move_down(size);
-                self.cursor.current.0 = 0;
-                self.cursor.possible.0 = 0;
-                */
-
                 // get current line index, append new line after
 
                 // FIX: this breaks
@@ -212,46 +201,9 @@ impl Buffer {
                 self.cursor.possible.0 = 0;
             },
             KeyCode::Backspace => {
-                /*
-                let line_index = usize::from(self.ptr_y + self.cursor.current.1);
-
-                let current_line = &mut self.lines.lines[line_index];
-                let text_index = usize::from(self.cursor.current.0);
-
-                if current_line.length != 0 && text_index > 0 {
-                    current_line.length -= 1;
-                    let text = &mut current_line.text;
-                    text.remove(text_index.checked_sub(1).unwrap_or(0));
-                    self.move_left();
-                } else{
-                    if line_index == 0 {
-                        return;
-                    }
-
-                    self.move_up();
-                    self.move_end_of_line();
-
-                    let current_line = &self.lines.lines[line_index];
-                    let text = current_line.text.clone();
-                    self.lines.lines.remove(line_index);
-                    let line_above = self.lines.lines.get_mut(line_index-1).unwrap();
-
-                    line_above.text = format!("{}{}", line_above.text, &text);
-                    line_above.length = line_above.text.len().try_into().unwrap();
-                }
-                */
-
-                // remove at current idx - 1
-                // get cur indx
-                // VERY BAD
-                // remember to move cursor
                 let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
 
                 if let Ok(line_idx) = line_idx {
-                    // should be safe
-                    // let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
-                    // wonky
-                    // why "- 1"
                     let local_idx = self.cursor.current.0 + self.ptr_x;
                     let curr_idx = line_idx + local_idx;
 
@@ -306,6 +258,8 @@ impl Buffer {
             let x = std::cmp::min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
+
+        self.refresh_view(size);
     }
 
     pub fn move_up(&mut self) {
@@ -316,7 +270,6 @@ impl Buffer {
 
         self.cursor.current.1 = self.cursor.current.1.checked_sub(1).unwrap_or(self.cursor.current.1);
 
-        //let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
         let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars();
 
         if line_len == 0 {
@@ -330,7 +283,6 @@ impl Buffer {
 
     // TODO: cursor movement when in command mode
     pub fn move_right(&mut self) {
-        // self.cursor.current.0 = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
         let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
         if line_len == 0 {
             self.cursor.current.0 = 0;
@@ -364,8 +316,6 @@ impl Buffer {
     }
 
     pub fn move_end_of_line(&mut self) {
-        // let line_len = self.lines.lines.get(usize::from(self.cursor.current.1 + self.ptr_y)).unwrap().length;
-        // let line_len = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1;
         let slice = self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y);
 
         if let Some(slice) = slice {
@@ -390,68 +340,82 @@ impl Buffer {
 
     }
 
-    // TODO: implemet this function
     pub fn move_begin_of_line(&mut self){
-        /*
         self.cursor.current.0 = 0;
         self.cursor.possible.0 = 0;
-        */
     }
 
-    // TODO: make work with going to next line
-    pub fn move_next_word(&mut self) {
-        /*
-        // conversion
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
+    // TODO: calc viewport if needed
+    pub fn move_next_word(&mut self, size: (u16, u16)) {
+        // FIX: calc viewport
 
-        // get start col
-        let start_col = usize::from(self.cursor.current.0);
+        let str = self.lines.rope.to_string();
+        let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
 
-        // find col
-        let next = find_word_start_forward(line, start_col);
+        if let Ok(line_idx) = line_idx {
+            let start_col = line_idx + self.ptr_x + self.cursor.current.0;
+            let res = find_word_start_forward(&str, start_col);
 
-        // move cursor
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
+            if let Some(idx) = res {
+                // cursor movement
+                let line_num = self.lines.rope.try_byte_to_line(idx);
+                self.cursor.current.1 = line_num.unwrap_or(0);
+
+                let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1).unwrap_or(0);
+                let line_pos = idx - line_idx;
+                self.cursor.current.0 = line_pos;
+            }
         }
-        */
+
+        self.refresh_view(size);
     }
 
-    pub fn move_end_word(&mut self) {
-        /*
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
-        let start_col = usize::from(self.cursor.current.0);
-        let next = find_word_end_forward(line, start_col);
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
+    // FIX: gross when executed, gets hung on an index
+    pub fn move_end_word(&mut self, size: (u16, u16)) {
+        let str = self.lines.rope.to_string();
+        let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
+
+        if let Ok(line_idx) = line_idx {
+            let start_col = line_idx + self.ptr_x + self.cursor.current.0;
+            let res = find_word_end_forward(&str, start_col);
+
+            if let Some(idx) = res {
+                // cursor movement
+                let line_num = self.lines.rope.try_byte_to_line(idx);
+                self.cursor.current.1 = line_num.unwrap_or(0);
+
+                let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1).unwrap_or(0);
+                let line_pos = idx - line_idx;
+                self.cursor.current.0 = line_pos;
+            }
         }
-        */
+
+        self.refresh_view(size);
     }
 
-    pub fn move_back_word(&mut self) {
-        /*
-        let line = &self.lines.lines.get(usize::from(self.cursor.current.1)).unwrap().text;
-        let start_col = usize::from(self.cursor.current.0);
-        let next = find_word_start_backward(line, start_col);
-        match next {
-            Some(index) => {
-                self.cursor.current.0 = index as u16;
-                self.cursor.possible.0 = index as u16;
-            },
-            None => {}
+    pub fn move_back_word(&mut self, size: (u16, u16)) {
+        let str = self.lines.rope.to_string();
+        let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
+
+        if let Ok(line_idx) = line_idx {
+            let start_col = line_idx + self.ptr_x + self.cursor.current.0;
+            let res = find_word_start_backward(&str, start_col);
+
+            if let Some(idx) = res {
+                // cursor movement
+                let line_num = self.lines.rope.try_byte_to_line(idx);
+                self.cursor.current.1 = line_num.unwrap_or(0);
+
+                let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1).unwrap_or(0);
+                let line_pos = idx - line_idx;
+                self.cursor.current.0 = line_pos;
+            }
         }
-        */
+
+        self.refresh_view(size);
     }
 
-    pub fn new_line_above(&mut self) {
+    pub fn new_line_above(&mut self, size: (u16, u16)) {
         /*
         let current = self.ptr_y + self.cursor.current.1;
         // current = current.checked_sub(1).unwrap_or(0);
@@ -500,6 +464,7 @@ impl Buffer {
     // TODO: grab current path and then join with new name 
     // impl as own function when making new buffer
     // ropes not impled here
+    // impl in new buffer
     pub fn open(&mut self, name: &String) -> std::io::Result<()>{
         /*
         // convert name to relative path
@@ -552,6 +517,21 @@ impl Buffer {
         self.mode = Mode::Normal;
     }
 
+    pub fn refresh_view(&mut self, size: (u16, u16)) {
+        // check if cursor on screen
+        let current_line = self.ptr_y + self.cursor.current.1;
+
+        // get maximum
+        let max = self.ptr_y + size.1 as usize;
+        // update accordingly
+
+        if current_line > max {
+            let adjustment = current_line - max;
+            self.ptr_y += adjustment;
+        }
+    }
+
+    // TODO: check file permissions
     pub fn save(&self) -> String {
         /*
         if self.buffer_type == BufferType::File {
