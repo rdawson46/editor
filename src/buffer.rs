@@ -38,8 +38,9 @@ use ropey::Rope;
         * new line below 
  7. open function
         * open files 
-        * open dirs
-        * impl into new buffer func
+        * open dirs 
+        * impl into new buffer func 
+        * empty file
  8. opening from directories
  9. path saving
    remove any unused imports
@@ -91,7 +92,8 @@ pub struct Buffer {
 
 impl Buffer {
     // TODO: rework to incorporate open
-    pub fn new(path: &Path) -> Result<Buffer> {
+    pub fn new(path: &String) -> Result<Buffer> {
+        /*
         let btype: BufferType;
         let mut lines: Lines;
         let mut file_path: Option<PathBuf> = None;
@@ -145,6 +147,21 @@ impl Buffer {
             file: file_path,
             mode: Mode::Normal
         });
+        */
+
+        let mut buffer = Buffer {
+            buffer_type: BufferType::Empty,
+            lines: Lines { rope: Rope::new() },
+            ptr_y: 0,
+            ptr_x: 0,
+            cursor: Cursor::new(),
+            file: None,
+            mode: Mode::Normal,
+        };
+
+        buffer.open(path)?;
+
+        Ok(buffer)
     }
 
     // NOTE: mode change functions
@@ -495,8 +512,9 @@ impl Buffer {
         // open and return
         let path = Path::new(name);
 
+        // TODO: impl for empty
         if !path.exists() {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Path didn't exist"))
+            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Path didn't exist"));
         }
 
         if path.is_file() {
@@ -508,7 +526,25 @@ impl Buffer {
             self.file = Some(path.to_owned());
             self.buffer_type = BufferType::File;
         } else if path.is_dir() {
-            // WARNING: not implemented
+            // children to lines in rope
+            let mut rope = Rope::new();
+
+            rope.append(".\n".into());
+            rope.append("..\n".into());
+
+            let reader = read_dir(path).unwrap();
+
+            for path in reader {
+                let path = path.unwrap().file_name().into_string().unwrap();
+                let mut path = String::from(path);
+                path.push_str("\n");
+                rope.append(path.into());
+            }
+
+            // FIX: bad
+            self.lines.rope = rope;
+            self.file = None;
+            self.buffer_type = BufferType::Directory;
             return Ok(());
         } else {
             panic!("no thank you");

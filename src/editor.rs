@@ -30,7 +30,7 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new(path: &Path)-> Result<Editor> {
+    pub fn new(path: &String)-> Result<Editor> {
         let buf = Buffer::new(path)?;
 
         // port address for logger
@@ -394,7 +394,7 @@ impl Editor {
                     },
                     CommandKey::NewBuf => {
                         self.send(String::from("New buffer"));
-                        self.new_buffer(std::path::Path::new("."));
+                        self.new_buffer(&".".to_string());
                     },
                     CommandKey::BufCount => {
                         // sent message to count of opened buffers
@@ -454,7 +454,7 @@ impl Editor {
 
     // TODO: add function for modifying what the buffer contains
 
-    pub fn new_buffer(&mut self, path: &Path){
+    pub fn new_buffer(&mut self, path: &String){
         // WARN: check for possible errors that can return
         let buf = Buffer::new(path);
 

@@ -15,7 +15,6 @@ use crate::tui::{
     Event
 };
 use crate::ui::{ui, update};
-
 use color_eyre::eyre::Result;
 
 
@@ -28,10 +27,10 @@ async fn run() -> Result<()> {
     let filename = filename.unwrap_or(String::from("."));
 
     //let filename = filename.unwrap();
-    let filename = std::path::Path::new(&filename);
+    //let filename = std::path::Path::new(&filename);
 
     let mut tui = Tui::new()?.tick_rate(1.0);
-    let mut editor = Editor::new(filename)?;
+    let mut editor = Editor::new(&filename)?;
 
     tui.enter()?; 
 
