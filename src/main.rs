@@ -8,10 +8,8 @@ mod ui;
 mod tui;
 mod word;
 mod buffer;
-use crate::editor::{
-    Editor,
-    Mode
-};
+use crate::editor::Editor;
+use crate::buffer::Mode;
 use crate::tui::{
     Tui,
     Event

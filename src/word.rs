@@ -63,6 +63,7 @@ pub fn find_word_start_backward(line: &String, start_col: usize) -> Option<usize
     (cur != CharKind::Space).then(|| 0)
 }
 
+#[warn(dead_code)]
 pub fn find_next_occur_forward (line: &String, start_col: usize, target: char) -> Option<usize> {
     let it = line.chars().enumerate().skip(start_col);
     for (col, c) in it {
@@ -73,6 +74,7 @@ pub fn find_next_occur_forward (line: &String, start_col: usize, target: char) -
     None
 }
 
+#[warn(dead_code)]
 pub fn find_next_occur_backward (line: &String, start_col: usize, target: char) -> Option<usize> {
     let idx = line
         .char_indices()

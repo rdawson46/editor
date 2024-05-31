@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs::{File, read_dir};
-use crate::editor::{Cursor, Mode};
 use crossterm::{cursor, execute};
 use crate::word::{
     find_word_end_forward,
@@ -38,11 +37,32 @@ use ropey::Rope;
         * new line above 
         * new line below 
  7. open function
- 8. opening directories
+        * open files 
+        * open dirs
+        * impl into new buffer func
+ 8. opening from directories
+ 9. path saving
    remove any unused imports
 =============================
 
 */
+
+pub enum Mode{
+    Insert, 
+    Command,
+    Normal
+}
+
+pub struct Cursor{
+    pub current: (usize, usize),
+    pub possible: (usize, usize)
+}
+
+impl Cursor{
+    pub fn new() -> Cursor{
+        Cursor { current: (0,0), possible: (0,0) }
+    }
+}
 
 
 #[derive(PartialEq)]
@@ -70,6 +90,7 @@ pub struct Buffer {
 }
 
 impl Buffer {
+    // TODO: rework to incorporate open
     pub fn new(path: &Path) -> Result<Buffer> {
         let btype: BufferType;
         let mut lines: Lines;
@@ -467,12 +488,8 @@ impl Buffer {
         "".to_string()
     }
 
-    // TODO: grab current path and then join with new name 
-    // impl as own function when making new buffer
-    // ropes not impled here
-    // impl in new buffer
+    // TODO: impl in new buffer
     pub fn open(&mut self, name: &String) -> std::io::Result<()>{
-        /*
         // convert name to relative path
         // check file vs dir
         // open and return
@@ -483,26 +500,13 @@ impl Buffer {
         }
 
         if path.is_file() {
-            if let Ok(file) = File::open(path) {
-                self.buffer_type = BufferType::File;
+            let rope = Rope::from_reader(
+                File::open(&path)?
+            )?;
 
-                let reader = BufReader::new(file);
-                let mut file_lines: Vec<Line> = vec![];
-
-                for line in reader.lines() {
-                    if let Ok(text) = line {
-                        let length: u16 = text.len().try_into().unwrap();
-                        file_lines.push(Line {
-                            text,
-                            length
-                        });
-                    }
-                }
-
-                // TODO: impl ropes
-                self.lines = Lines { lines: file_lines, rope: Rope::new() };
-                self.file = Some(path.to_owned());
-            }
+            self.lines = Lines { rope };
+            self.file = Some(path.to_owned());
+            self.buffer_type = BufferType::File;
         } else if path.is_dir() {
             // WARNING: not implemented
             return Ok(());
@@ -511,8 +515,6 @@ impl Buffer {
         }
 
         self.refresh_buffer();
-
-        */
         Ok(())
     }
 
@@ -526,10 +528,7 @@ impl Buffer {
     pub fn refresh_view(&mut self, size: (u16, u16)) {
         // check if cursor on screen
         let current_line = self.ptr_y + self.cursor.current.1;
-
-        // get maximum
         let max = self.ptr_y + size.1 as usize;
-        // update accordingly
 
         if current_line > max {
             let adjustment = current_line - max;
@@ -539,35 +538,7 @@ impl Buffer {
 
     // TODO: check file permissions
     pub fn save(&self) -> String {
-        /*
         if self.buffer_type == BufferType::File {
-            let mut total_string = "".to_string();
-
-            for line in self.lines.lines.iter() {
-                total_string.push_str(&line.text);
-
-                total_string.push('\n');
-            }
-
-            if let Some(file) = &self.file {
-                let status = std::fs::write(file, total_string.as_bytes());
-
-                match status {
-                    Ok(_) => {
-                        return format!("Wrote {} bytes", total_string.len())
-                    },
-                    Err(_) => String::from("writing to file didn't work"),
-                }
-            } else {
-                return String::from("No file found")
-            }
-        } else {
-            return String::from("Can't write to directory")
-        }
-        */
-        if self.buffer_type == BufferType::File {
-            // self.lines.rope.write_to(writer)
-            // open file and wrap file writer 
             if let Some(file) = &self.file {
                 let str = self.lines.rope.to_string();
                 let status = std::fs::write(file, str.as_bytes());

@@ -1,5 +1,5 @@
 use crate::command::{Command, CommandKey};
-use crate::buffer::{Buffer, BufferType};
+use crate::buffer::{Buffer, BufferType, Mode};
 use crate::motion::MotionBuffer;
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
@@ -17,22 +17,6 @@ macro_rules! current_buf {
     };
 }
 
-pub enum Mode{
-    Insert, 
-    Command,
-    Normal
-}
-
-pub struct Cursor{
-    pub current: (usize, usize),
-    pub possible: (usize, usize)
-}
-
-impl Cursor{
-    pub fn new() -> Cursor{
-        Cursor { current: (0,0), possible: (0,0) }
-    }
-}
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,

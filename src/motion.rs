@@ -59,9 +59,8 @@ impl Concept {
         self.chars.clear();
     }
 }
-*/
 
-// single threaded concept
+// single threaded concept 2
 // TODO: might have to change types in the options
     // like motionbuffer to all String
 struct Signal {
@@ -127,6 +126,7 @@ impl Concept {
         self.chars.clear();
     }
 }
+*/
 
 
 impl MotionBuffer {

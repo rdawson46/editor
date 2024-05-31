@@ -1,5 +1,5 @@
 [package]
-name = "Baby-Vim"
+name = "baby-vim"
 version = "0.1.0"
 edition = "2021"
 
