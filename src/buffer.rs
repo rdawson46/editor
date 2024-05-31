@@ -2,7 +2,6 @@ use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use std::fs::{File, read_dir};
-// use std::io::{BufReader, BufRead};
 use crate::editor::{Cursor, Mode};
 use crossterm::{cursor, execute};
 use crate::word::{
@@ -34,13 +33,13 @@ use ropey::Rope;
         * working state 
         * viewport calc 
             * refresh view 
- 6. getting saving and action functions
-        * new line above
-        * new line below
-        * save
+   getting saving and action functions
+        * save 
+        * new line above 
+        * new line below 
  7. open function
  8. opening directories
- 9. remove any unused imports
+   remove any unused imports
 =============================
 
 */
@@ -416,13 +415,17 @@ impl Buffer {
     }
 
     pub fn new_line_above(&mut self, size: (u16, u16)) {
-        /*
-        let current = self.ptr_y + self.cursor.current.1;
-        // current = current.checked_sub(1).unwrap_or(0);
-        let new_line = Line { text: "".to_string(), length: 0 };
-        self.lines.lines.insert(current.into(), new_line);
-        self.change_mode(Mode::Insert);
-        */
+        self.cursor.current.0 = 0;
+        self.cursor.possible.0 = 0;
+
+        let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1);
+
+        if let Ok(idx) = line_idx {
+            let _ = self.lines.rope.try_insert_char(idx, '\n');
+            self.change_mode(Mode::Insert);
+        }
+
+        self.refresh_view(size);
     }
 
     pub fn new_line_below(&mut self, size: (u16, u16)) {
@@ -434,6 +437,9 @@ impl Buffer {
         self.move_down(size);
         self.change_mode(Mode::Insert);
         */
+        self.move_down(size);
+        self.new_line_above(size);
+        self.refresh_view(size);
     }
 
     // open file/dir under the cusor in dir menu and replace it in the current buffer
@@ -559,6 +565,21 @@ impl Buffer {
             return String::from("Can't write to directory")
         }
         */
-        "".to_string()
+        if self.buffer_type == BufferType::File {
+            // self.lines.rope.write_to(writer)
+            // open file and wrap file writer 
+            if let Some(file) = &self.file {
+                let str = self.lines.rope.to_string();
+                let status = std::fs::write(file, str.as_bytes());
+
+                return match status {
+                    Ok(_) => format!("Wrote {} bytes", str.len()),
+                    Err(_) => String::from("Writing to file didn't work")
+                };
+            } else {
+                return String::from("No file found");
+            }
+        }
+        return String::from("Can't write to directory")
     }
 }
