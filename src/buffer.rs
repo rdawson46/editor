@@ -43,6 +43,7 @@ use ropey::Rope;
         * empty file
  8. opening from directories
  9. path saving
+10. buffers overflow and screen doesn't adjust with constant word jumps
    remove any unused imports
 =============================
 
