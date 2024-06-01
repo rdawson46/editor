@@ -36,14 +36,15 @@ use ropey::Rope;
         * save 
         * new line above 
         * new line below 
- 7. open function
+   open function
         * open files 
         * open dirs 
         * impl into new buffer func 
-        * empty file
+        * empty file 
  8. opening from directories
  9. path saving
 10. buffers overflow and screen doesn't adjust with constant word jumps
+11. opening symlinks
    remove any unused imports
 =============================
 
@@ -94,62 +95,6 @@ pub struct Buffer {
 impl Buffer {
     // TODO: rework to incorporate open
     pub fn new(path: &String) -> Result<Buffer> {
-        /*
-        let btype: BufferType;
-        let mut lines: Lines;
-        let mut file_path: Option<PathBuf> = None;
-
-        if path.exists() {
-            if path.is_file() {
-                let rope = Rope::from_reader(
-                    File::open(&path)?
-                )?;
-                lines = Lines { rope };
-                file_path = Some(path.to_owned());
-                btype = BufferType::File;
-            } else if path.is_dir() {
-                btype = BufferType::Directory;
-                // TODO: impl ropes
-                lines = Lines { rope: Rope::new() };
-
-                // let self_dot = String::from(".");
-                // let parent_dot = String::from("..");
-
-                lines.rope.append(".\n".into());
-                lines.rope.append("..\n".into());
-
-
-                let reader = read_dir(path).unwrap();
-
-                for path in reader {
-                    let path = path.unwrap().file_name().into_string().unwrap();
-                    // let len = path.len();
-                    let mut path = String::from(path);
-                    path.push_str("\n");
-                    lines.rope.append(path.into());
-                }
-
-                lines.rope.remove(lines.rope.len_chars()-1..lines.rope.len_chars())
-            } else {
-                panic!("no thank you");
-            }
-        } else {
-            btype = BufferType::Empty;
-            // TODO: impl ropes
-            lines = Lines { rope: Rope::new() }
-        }
-
-        return Ok(Buffer {
-            buffer_type: btype,
-            lines,
-            ptr_x: 0,
-            ptr_y: 0,
-            cursor: Cursor::new(),
-            file: file_path,
-            mode: Mode::Normal
-        });
-        */
-
         let mut buffer = Buffer {
             buffer_type: BufferType::Empty,
             lines: Lines { rope: Rope::new() },
@@ -503,6 +448,7 @@ impl Buffer {
 
         return "could not open file".to_string();
         */
+        let line_idx = self.ptr_y + self.cursor.current.1;
         "".to_string()
     }
 
@@ -515,7 +461,10 @@ impl Buffer {
 
         // TODO: impl for empty
         if !path.exists() {
-            return Err(std::io::Error::new(std::io::ErrorKind::Other, "Path didn't exist"));
+            self.buffer_type = BufferType::Empty;
+            self.lines.rope = Rope::new();
+            self.file = None;
+            return Ok(())
         }
 
         if path.is_file() {
@@ -542,11 +491,11 @@ impl Buffer {
                 rope.append(path.into());
             }
 
-            // FIX: bad
             self.lines.rope = rope;
             self.file = None;
             self.buffer_type = BufferType::Directory;
-            return Ok(());
+        } else if path.is_symlink() {
+            todo!();
         } else {
             panic!("no thank you");
         }
