@@ -8,7 +8,10 @@ use crate::word::{
     find_word_start_forward,
     find_word_start_backward
 };
-use ropey::Rope;
+use ropey::{
+    Rope,
+    RopeSlice,
+};
 
 /*
 
@@ -41,7 +44,7 @@ use ropey::Rope;
         * open dirs 
         * impl into new buffer func 
         * empty file 
- 8. opening from directories
+   opening from directories 
  9. path saving
 10. buffers overflow and screen doesn't adjust with constant word jumps
 11. opening symlinks
@@ -435,21 +438,23 @@ impl Buffer {
         // open
         // refresh buffer
 
-        /*
-        let line_index = usize::from(self.ptr_y + self.cursor.current.1);
-        let current_line = &self.lines.lines[line_index];
-        let file_name = current_line.text.clone();
+        let line_idx = self.ptr_y + self.cursor.current.1;
+        let current_line = self.lines.rope.get_line(line_idx);
 
-        let res = &self.open(&file_name);
+        if let Some(line) = current_line {
+            let mut result = "".to_string();
+            for c in line.chars() {
+                if c == '\n' {
+                    break;
+                }
+                result.push(c);
+            }
 
-        if let Ok(_) = res {
-            return file_name;
+            self.refresh_buffer();
+            return result;
         }
 
         return "could not open file".to_string();
-        */
-        let line_idx = self.ptr_y + self.cursor.current.1;
-        "".to_string()
     }
 
     // TODO: impl in new buffer

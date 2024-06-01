@@ -4,7 +4,6 @@ use crate::motion::MotionBuffer;
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
 use std::io::Write;
-use std::path::Path;
 use std::usize;
 use ratatui::style::Stylize;
 use ratatui::prelude::{Style, Alignment};
@@ -165,6 +164,7 @@ impl Editor {
                         // open file/directory
                         let file_name = current_buf!(self).get_hover_file();
                         self.send(format!("Opening {file_name}"));
+                        let _ = current_buf!(self).open(&file_name);
                     },
                     KeyCode::Char(value) => {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
