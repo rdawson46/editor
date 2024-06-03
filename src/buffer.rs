@@ -1,17 +1,19 @@
 use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use std::fs::{File, read_dir};
+use std::env;
+use std::fs::{
+    File,
+    read_dir,
+    // canonicalize,
+};
 use crossterm::{cursor, execute};
 use crate::word::{
     find_word_end_forward,
     find_word_start_forward,
     find_word_start_backward
 };
-use ropey::{
-    Rope,
-    RopeSlice,
-};
+use ropey::Rope;
 
 /*
 
@@ -46,6 +48,12 @@ use ropey::{
         * empty file 
    opening from directories 
  9. path saving
+        * grab the absolute path of the current parent dir 
+        * move from buffer::open into buffer::new? 
+        * change Some(relative_path) to Some(absolute_path) 
+        * when opening a file/dir append to parent_path and then open 
+        * when opening a dir reassign parent path with the new path 
+        * create a starting dir for the editor, will be used when new buffers are created
 10. buffers overflow and screen doesn't adjust with constant word jumps
 11. opening symlinks
    remove any unused imports
@@ -56,7 +64,7 @@ use ropey::{
 pub enum Mode{
     Insert, 
     Command,
-    Normal
+    Normal,
 }
 
 pub struct Cursor{
@@ -92,12 +100,15 @@ pub struct Buffer {
     pub ptr_x: usize,
     pub cursor: Cursor,
     pub file: Option<PathBuf>,
+    pub parent_dir: Option<PathBuf>, // HACK: is this the right path?
     pub mode: Mode
 }
 
 impl Buffer {
     // TODO: rework to incorporate open
     pub fn new(path: &String) -> Result<Buffer> {
+        let parent_dir = env::current_dir()?;
+
         let mut buffer = Buffer {
             buffer_type: BufferType::Empty,
             lines: Lines { rope: Rope::new() },
@@ -105,6 +116,7 @@ impl Buffer {
             ptr_x: 0,
             cursor: Cursor::new(),
             file: None,
+            parent_dir: Some(parent_dir),
             mode: Mode::Normal,
         };
 
@@ -462,51 +474,62 @@ impl Buffer {
         // convert name to relative path
         // check file vs dir
         // open and return
+
+        // might be helpful for different impl
+        // let current_path = canonicalize(Path::new("."))?;
+
         let path = Path::new(name);
 
-        // TODO: impl for empty
-        if !path.exists() {
-            self.buffer_type = BufferType::Empty;
-            self.lines.rope = Rope::new();
-            self.file = None;
-            return Ok(())
-        }
+        if let Some(parent_dir) = &self.parent_dir {
+            let path = parent_dir.join(path);
 
-        if path.is_file() {
-            let rope = Rope::from_reader(
-                File::open(&path)?
-            )?;
-
-            self.lines = Lines { rope };
-            self.file = Some(path.to_owned());
-            self.buffer_type = BufferType::File;
-        } else if path.is_dir() {
-            // children to lines in rope
-            let mut rope = Rope::new();
-
-            rope.append(".\n".into());
-            rope.append("..\n".into());
-
-            let reader = read_dir(path).unwrap();
-
-            for path in reader {
-                let path = path.unwrap().file_name().into_string().unwrap();
-                let mut path = String::from(path);
-                path.push_str("\n");
-                rope.append(path.into());
+            // TODO: impl for empty
+            if !path.exists() {
+                self.buffer_type = BufferType::Empty;
+                self.lines.rope = Rope::new();
+                self.file = None;
+                return Ok(())
             }
 
-            self.lines.rope = rope;
-            self.file = None;
-            self.buffer_type = BufferType::Directory;
-        } else if path.is_symlink() {
-            todo!();
-        } else {
-            panic!("no thank you");
-        }
+            if path.is_file() {
+                let rope = Rope::from_reader(
+                    File::open(&path)?
+                    )?;
 
-        self.refresh_buffer();
-        Ok(())
+                self.lines = Lines { rope };
+                self.file = Some(path.to_owned());
+                self.buffer_type = BufferType::File;
+            } else if path.is_dir() {
+                // children to lines in rope
+                let mut rope = Rope::new();
+
+                rope.append(".\n".into());
+                rope.append("..\n".into());
+
+                let reader = read_dir(path.clone()).unwrap();
+
+                for path in reader {
+                    let path = path.unwrap().file_name().into_string().unwrap();
+                    let mut path = String::from(path);
+                    path.push_str("\n");
+                    rope.append(path.into());
+                }
+
+                self.lines.rope = rope;
+                self.file = None;
+                self.parent_dir = Some(path);
+                self.buffer_type = BufferType::Directory;
+            } else if path.is_symlink() {
+                todo!();
+            } else {
+                panic!("no thank you");
+            }
+
+            self.refresh_buffer();
+            Ok(())
+        } else {
+            panic!("how did you manage to break this");
+        }
     }
 
     pub fn refresh_buffer(&mut self) {
