@@ -39,18 +39,9 @@ impl Editor {
         };
 
         if port != "" {
-            //  TODO: 
-
-            // old udp stuff
-            //let socket = UdpSocket::bind("127.0.0.1:8080");
-
             let stream = TcpStream::connect(format!("127.0.0.1:{}", port));
 
             if let Ok(mut stream) = stream {
-                // socket.connect(format!("127.0.0.1:{}", port)).unwrap();
-
-
-                // TODO: this won't always work
                 if stream.write(b"connection test").is_ok() {
                     return Ok(Editor {
                         buffers: vec![buf],
@@ -81,9 +72,8 @@ impl Editor {
     pub fn change_mode(&mut self, mode: Mode) {
         current_buf!(self).change_mode(mode);
 
-        // HACK: check if this worked
-
-        match current_buf!(self).mode {
+        // HACK: check if this worked, did not
+        match mode {
             Mode::Insert | Mode::Command => {
                 self.set_message(None);
             }
@@ -92,8 +82,6 @@ impl Editor {
     }
 
     // NOTE: display functions
-
-    // FIX: this issue with the tcp logger
     pub fn mode_display(&mut self) -> (Paragraph, Option<Paragraph>) {
         match &current_buf!(self).mode {
             Mode::Insert => {
@@ -409,12 +397,12 @@ impl Editor {
 
     pub fn motion_func(&mut self, key: &String) {
         match key.as_str() {
-            ":" => current_buf!(self).change_mode(Mode::Command),
+            ":" => self.change_mode(Mode::Command),
             "j" => current_buf!(self).move_down(self.size),
             "k" => current_buf!(self).move_up(),
             "h" => current_buf!(self).move_left(),
             "l" => current_buf!(self).move_right(),
-            "i" => current_buf!(self).change_mode(Mode::Insert),
+            "i" => self.change_mode(Mode::Insert),
             "a" => {
                 current_buf!(self).change_mode(Mode::Insert);
                 current_buf!(self).move_right();
@@ -509,12 +497,12 @@ impl Editor {
     }
 
     pub fn set_message(&mut self, new_mes: Option<String>) {
-        match new_mes {
-            Some(message) => {
-                self.message = Some(message.clone());
-                self.send(format!("Set Message {}", message.clone()))
-            },
-            None => self.message = None
+        if let Some(message) = new_mes {
+            self.message = Some(message.clone());
+            self.send(format!("Set Message {}", message.clone()));
+        } else {
+            self.message = None;
+            self.send(format!("Message was cleared"));
         }
     }
 

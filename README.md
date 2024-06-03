@@ -8,14 +8,9 @@ Make an editor that:
 * customizable
 
 ## Todo
-* impl ropes into system
-    * impl Ropey
-        * impl movement in buffer
-        * buffer saving and other actions
-* improve directory buffer events
-    * added better pathing for nesting dirs
 * improve error handling
 * clearing sys messages
+* overflow on word jumps
 * add syntax highlighting with tree-sitter
     * add basic color schemes
 * work out messages not displaying and clearing

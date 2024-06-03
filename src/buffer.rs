@@ -5,7 +5,6 @@ use std::env;
 use std::fs::{
     File,
     read_dir,
-    // canonicalize,
 };
 use crossterm::{cursor, execute};
 use crate::word::{
@@ -17,50 +16,13 @@ use ropey::Rope;
 
 /*
 
-=== GETTING ROPES WORKING ===
-   get UI working
-   get movements working again
-        * down 
-        * up 
-        * left 
-        * rigt 
-        * end of line 
-   get text insertion and deletion working
-        * Insertion 
-            * new line (creation) 
-        * deletion 
-            * new (deletion) 
-   get jump to line working, in editor.rs
-        * general idea 
-        * always displays off screen ~
-   move_to functions
-        * working state 
-        * viewport calc 
-            * refresh view 
-   getting saving and action functions
-        * save 
-        * new line above 
-        * new line below 
-   open function
-        * open files 
-        * open dirs 
-        * impl into new buffer func 
-        * empty file 
-   opening from directories 
- 9. path saving
-        * grab the absolute path of the current parent dir 
-        * move from buffer::open into buffer::new? 
-        * change Some(relative_path) to Some(absolute_path) 
-        * when opening a file/dir append to parent_path and then open 
-        * when opening a dir reassign parent path with the new path 
-        * create a starting dir for the editor, will be used when new buffers are created
-10. buffers overflow and screen doesn't adjust with constant word jumps
-11. opening symlinks
-   remove any unused imports
+=============================
+ 1. opening symlinks
 =============================
 
 */
 
+#[derive(Clone, Copy)]
 pub enum Mode{
     Insert, 
     Command,
