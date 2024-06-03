@@ -8,11 +8,11 @@ Make an editor that:
 * customizable
 
 ## Todo
-* improve error handling
-* clearing sys messages
-* overflow on word jumps
 * add syntax highlighting with tree-sitter
     * add basic color schemes
+* overflow on word jumps
+* improve screen moving
+* improve error handling
 * work out messages not displaying and clearing
     * due to clearing message when changing mode
 * define runtime better for action (motions, commands, etc) handling

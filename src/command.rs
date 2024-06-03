@@ -9,7 +9,8 @@ pub enum CommandKey {
     NextBuf,
     PrevBuf,
     NewBuf,
-    BufCount
+    BufCount,
+    Tree,
 }
 
 pub struct Command {
@@ -48,6 +49,7 @@ impl Command {
                 "bufp" => Some(CommandKey::PrevBuf),
                 "newbuf" => Some(CommandKey::NewBuf),
                 "bufcount" => Some(CommandKey::BufCount),
+                "tree" => Some(CommandKey::Tree),
                 _ => None
             };
         }

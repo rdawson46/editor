@@ -8,6 +8,7 @@ mod ui;
 mod tui;
 mod word;
 mod buffer;
+mod colors;
 use crate::editor::Editor;
 use crate::buffer::Mode;
 use crate::tui::{
@@ -70,8 +71,6 @@ async fn run() -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     let result = run().await;
-
     result?;
-
     Ok(())
 }

@@ -13,6 +13,11 @@ use crate::word::{
     find_word_start_backward
 };
 use ropey::Rope;
+use tree_sitter::{
+    Parser,
+    Tree,
+    // Node
+};
 
 /*
 
@@ -48,9 +53,10 @@ pub enum BufferType {
     File
 }
 
-// fields will be added later
 pub struct Lines{
     pub rope: Rope,
+    pub parser: Parser,
+    pub tree: Option<Tree>,
 }
 
 // TODO: might need to add a variable for pathing
@@ -62,7 +68,7 @@ pub struct Buffer {
     pub ptr_x: usize,
     pub cursor: Cursor,
     pub file: Option<PathBuf>,
-    pub parent_dir: Option<PathBuf>, // HACK: is this the right path?
+    pub parent_dir: Option<PathBuf>,
     pub mode: Mode
 }
 
@@ -73,7 +79,11 @@ impl Buffer {
 
         let mut buffer = Buffer {
             buffer_type: BufferType::Empty,
-            lines: Lines { rope: Rope::new() },
+            lines: Lines {
+                rope: Rope::new(),
+                parser: Parser::new(),
+                tree: None,
+            },
             ptr_y: 0,
             ptr_x: 0,
             cursor: Cursor::new(),
@@ -433,15 +443,7 @@ impl Buffer {
 
     // TODO: impl in new buffer
     pub fn open(&mut self, name: &String) -> std::io::Result<()>{
-        // convert name to relative path
-        // check file vs dir
-        // open and return
-
-        // might be helpful for different impl
-        // let current_path = canonicalize(Path::new("."))?;
-
         let path = Path::new(name);
-
         if let Some(parent_dir) = &self.parent_dir {
             let path = parent_dir.join(path);
 
@@ -458,7 +460,13 @@ impl Buffer {
                     File::open(&path)?
                     )?;
 
-                self.lines = Lines { rope };
+                let source_code = rope.to_string();
+
+                // doesn't work
+                self.lines.rope = rope.clone();
+                self.lines.tree = self.lines.parser.parse(source_code, None);
+                // ============
+
                 self.file = Some(path.to_owned());
                 self.buffer_type = BufferType::File;
             } else if path.is_dir() {
@@ -478,6 +486,7 @@ impl Buffer {
                 }
 
                 self.lines.rope = rope;
+                self.lines.tree = None;
                 self.file = None;
                 self.parent_dir = Some(path);
                 self.buffer_type = BufferType::Directory;

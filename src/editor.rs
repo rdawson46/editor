@@ -388,6 +388,17 @@ impl Editor {
                         // sent message to count of opened buffers
                         let message = String::from(format!("{} open buffers", self.buffers.len()));
                         self.set_message(Some(message))
+                    },
+                    CommandKey::Tree => {
+                        // send tree to tcp
+                        // get tree
+                        let tree = &current_buf!(self).lines.tree;
+
+                        if let Some(tree) = tree {
+                            self.send(tree.root_node().to_sexp());
+                        } else {
+                            self.set_message(Some("No tree found".to_string()));
+                        }
                     }
                 }
             },
