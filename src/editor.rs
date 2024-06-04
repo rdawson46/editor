@@ -1,14 +1,20 @@
-use crate::command::{Command, CommandKey};
-use crate::buffer::{Buffer, BufferType, Mode};
-use crate::motion::MotionBuffer;
+use crate::{
+    command::{Command, CommandKey},
+    buffer::{Buffer, BufferType, Mode},
+    motion::MotionBuffer,
+};
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
-use std::io::Write;
-use std::usize;
-use ratatui::style::Stylize;
-use ratatui::prelude::{Style, Alignment};
-use ratatui::widgets::{Paragraph, Borders, Block};
-use std::net::TcpStream;
+use std::{
+    io::Write,
+    usize,
+    net::TcpStream,
+};
+use ratatui::{
+    style::Stylize,
+    prelude::{Style, Alignment},
+    widgets::{Paragraph, Borders, Block},
+};
 
 macro_rules! current_buf {
     ($e: expr) => {
@@ -389,17 +395,6 @@ impl Editor {
                         let message = String::from(format!("{} open buffers", self.buffers.len()));
                         self.set_message(Some(message))
                     },
-                    CommandKey::Tree => {
-                        // send tree to tcp
-                        // get tree
-                        let tree = &current_buf!(self).lines.tree;
-
-                        if let Some(tree) = tree {
-                            self.send(tree.root_node().to_sexp());
-                        } else {
-                            self.set_message(Some("No tree found".to_string()));
-                        }
-                    }
                 }
             },
             None => {}

@@ -1,14 +1,22 @@
 use std::rc::Rc;
 use std::usize;
-use crate::Event;
-use crate::Tui;
-use crate::X_OFFSET;
-use crate::editor::Editor;
+use crate::{
+    Event,
+    Tui,
+    X_OFFSET,
+    editor::Editor
+};
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
     widgets::{Block, Padding, Paragraph},
     Frame,
+};
+use tree_sitter_rust;
+use tree_sitter_highlight::{
+    HighlightEvent,
+    Highlighter,
+    HighlightConfiguration
 };
 
 

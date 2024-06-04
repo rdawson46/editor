@@ -13,16 +13,12 @@ use crate::word::{
     find_word_start_backward
 };
 use ropey::Rope;
-use tree_sitter::{
-    Parser,
-    Tree,
-    // Node
-};
 
 /*
 
 =============================
- 1. opening symlinks
+ 1. syntax highlighting with tree sitter
+ 2. opening symlinks
 =============================
 
 */
@@ -55,8 +51,6 @@ pub enum BufferType {
 
 pub struct Lines{
     pub rope: Rope,
-    pub parser: Parser,
-    pub tree: Option<Tree>,
 }
 
 // TODO: might need to add a variable for pathing
@@ -77,16 +71,10 @@ impl Buffer {
     pub fn new(path: &String) -> Result<Buffer> {
         let parent_dir = env::current_dir()?;
 
-        // TODO: make this automatic
-        let mut ts_parser = Parser::new();
-        ts_parser.set_language(&tree_sitter_rust::language()).unwrap();
-
         let mut buffer = Buffer {
             buffer_type: BufferType::Empty,
             lines: Lines {
                 rope: Rope::new(),
-                parser: ts_parser,
-                tree: None,
             },
             ptr_y: 0,
             ptr_x: 0,
@@ -404,28 +392,12 @@ impl Buffer {
     }
 
     pub fn new_line_below(&mut self, size: (u16, u16)) {
-        /*
-        let mut current = self.ptr_y + self.cursor.current.1;
-        current = current.checked_add(1).unwrap_or(u16::MAX);
-        let new_line = Line { text: "".to_string(), length: 0 };
-        self.lines.lines.insert(current.into(), new_line);
-        self.move_down(size);
-        self.change_mode(Mode::Insert);
-        */
         self.move_down(size);
         self.new_line_above(size);
         self.refresh_view(size);
     }
 
-    // open file/dir under the cusor in dir menu and replace it in the current buffer
-    // remember to reset cursor and anything else
     pub fn get_hover_file(&mut self) -> String {
-        // idea:
-        // get the file/dir name hovered over
-        // convert to relative path
-        // open
-        // refresh buffer
-
         let line_idx = self.ptr_y + self.cursor.current.1;
         let current_line = self.lines.rope.get_line(line_idx);
 
@@ -464,11 +436,7 @@ impl Buffer {
                     File::open(&path)?
                     )?;
 
-                let source_code = rope.to_string();
-
-                // doesn't work
-                // returns a None everytime
-                self.lines.tree = self.lines.parser.parse(source_code, None);
+                let source = rope.to_string();
 
                 self.lines.rope = rope;
                 self.file = Some(path.to_owned());
@@ -490,7 +458,6 @@ impl Buffer {
                 }
 
                 self.lines.rope = rope;
-                self.lines.tree = None;
                 self.file = None;
                 self.parent_dir = Some(path);
                 self.buffer_type = BufferType::Directory;

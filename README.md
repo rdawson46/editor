@@ -9,6 +9,7 @@ Make an editor that:
 
 ## Todo
 * get tree sitter working
+    * impl highlighting in ui.rs
 * add syntax highlighting with tree-sitter
     * add basic color schemes
 * overflow on word jumps
