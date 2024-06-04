@@ -8,6 +8,7 @@ Make an editor that:
 * customizable
 
 ## Todo
+* get tree sitter working
 * add syntax highlighting with tree-sitter
     * add basic color schemes
 * overflow on word jumps

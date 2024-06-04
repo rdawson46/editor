@@ -77,11 +77,15 @@ impl Buffer {
     pub fn new(path: &String) -> Result<Buffer> {
         let parent_dir = env::current_dir()?;
 
+        // TODO: make this automatic
+        let mut ts_parser = Parser::new();
+        ts_parser.set_language(&tree_sitter_rust::language()).unwrap();
+
         let mut buffer = Buffer {
             buffer_type: BufferType::Empty,
             lines: Lines {
                 rope: Rope::new(),
-                parser: Parser::new(),
+                parser: ts_parser,
                 tree: None,
             },
             ptr_y: 0,
@@ -463,10 +467,10 @@ impl Buffer {
                 let source_code = rope.to_string();
 
                 // doesn't work
-                self.lines.rope = rope.clone();
+                // returns a None everytime
                 self.lines.tree = self.lines.parser.parse(source_code, None);
-                // ============
 
+                self.lines.rope = rope;
                 self.file = Some(path.to_owned());
                 self.buffer_type = BufferType::File;
             } else if path.is_dir() {
