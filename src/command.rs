@@ -9,6 +9,12 @@ pub enum CommandKey {
     NextBuf,
     PrevBuf,
     NewBuf,
+    /*
+    NextWin,
+    PrevWin,
+    NewWin,
+    WinCount,
+    */
     BufCount,
 }
 
@@ -48,6 +54,12 @@ impl Command {
                 "bufp" => Some(CommandKey::PrevBuf),
                 "newbuf" => Some(CommandKey::NewBuf),
                 "bufcount" => Some(CommandKey::BufCount),
+                /*
+                "winn" => Some(CommandKey::NextWin),
+                "winp" => Some(CommandKey::PrevWin),
+                "newwin" => Some(CommandKey::NewWin),
+                "wincount" => Some(CommandKey::WinCount),
+                */
                 _ => None
             };
         }

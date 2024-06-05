@@ -6,6 +6,10 @@ use std::fs::{
     File,
     read_dir,
 };
+use ratatui::{
+    style::{Color, Style},
+    widgets::{Block, Padding, Paragraph},
+};
 use crossterm::{cursor, execute};
 use crate::word::{
     find_word_end_forward,
@@ -22,6 +26,11 @@ use ropey::Rope;
 =============================
 
 */
+
+#[warn(dead_code)]
+enum FileType {
+    Rust
+}
 
 #[derive(Clone, Copy)]
 pub enum Mode{
@@ -64,8 +73,9 @@ pub struct Buffer {
     pub cursor: Cursor,
     pub file: Option<PathBuf>,
     pub parent_dir: Option<PathBuf>,
-    pub mode: Mode
+    pub mode: Mode,
 }
+
 
 impl Buffer {
     // TODO: rework to incorporate open
@@ -510,7 +520,84 @@ impl Buffer {
         return String::from("Can't write to directory")
     }
 
+    #[warn(dead_code)]
     pub fn resize(&mut self, new_size: (u16, u16)) {
         self.size = new_size;
     }
+
+    // if returns some then I can use tree sitter
+    fn get_valid_file_type(&self) -> Option<FileType> {
+        if let Some(path_buf) = &self.file {
+            let extension = path_buf.as_path().extension();
+            if let Some(extension) = extension {
+                if "rs" == extension {
+                    return Some(FileType::Rust);
+                }
+            }
+        }
+
+        None
+    }
 }
+
+
+impl <'a>Buffer {
+    // line nums, text field
+    pub fn ui(&self) -> (Paragraph<'a>, Paragraph<'a>) {
+        let _file_type = self.get_valid_file_type();
+
+        let (line_string, text_string) = self.basic_text();
+
+        let line_par = Paragraph::new(line_string)
+                        .alignment(ratatui::layout::Alignment::Right)
+                        .style(Style::default().fg(Color::DarkGray));
+
+        let text_par = Paragraph::new(text_string)
+                        .block(Block::default()
+                               .padding(Padding::new(1, 0, 0, 0)));
+
+        (line_par, text_par) 
+    }
+
+    fn basic_text(&self) -> (String, String) {
+        let mut line_nums = "".to_string();
+        let mut text_string = "".to_string();
+
+        for (i, line) in self.lines.rope.lines().skip(self.ptr_y).enumerate() {
+            if i > self.ptr_y + usize::from(self.size.1) ||
+                i == self.lines.rope.len_lines() - 1 {
+                    break;
+            }
+
+            let mut i_str: String;
+            let current_line = usize::from(self.cursor.current.1);
+
+            if current_line != i {
+                if current_line > i {
+                    i_str = (current_line - i).to_string();
+                } else{
+                    i_str = (i - current_line).to_string();
+                }
+
+            } else {
+                i_str = (self.ptr_y + self.cursor.current.1 + 1).to_string();
+                if i_str.len() <= 2 {
+                    i_str.push(' ');
+                }
+            }
+
+            i_str.push_str("\n\r");
+
+            for char in i_str.chars() {
+                line_nums.push(char);
+            }
+
+            for char in line.chars() {
+                text_string.push(char);
+            }
+        }
+
+        (line_nums, text_string)
+    }
+}
+

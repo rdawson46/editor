@@ -11,6 +11,7 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph},
     Frame,
 };
+
 /*
  * --> commented until ready
 use tree_sitter_rust;
@@ -49,6 +50,10 @@ use tree_sitter_highlight::{
 
  - What Might Need To Happen:
     * make cells impl for highlighting instead of rendering full lines
+
+ - Issues:
+    * might have to make a cell system
+        * coloring will be difficult without
 
 ======================== */
 
@@ -99,6 +104,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
         }
     }
 
+    /*
     let (line_nums, text_string) = editor.buffer_display();
 
     f.render_widget(Paragraph::new(line_nums)
@@ -110,6 +116,12 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
                     .block(Block::default()
                     .padding(Padding::new(1, 0, 0, 0))),
                     num_text_layout[1]);
+    */
+
+    let (line_par, text_par) = editor.buffer_display();
+
+    f.render_widget(line_par, num_text_layout[0]);
+    f.render_widget(text_par, num_text_layout[1]);
 }
 
 

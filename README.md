@@ -12,7 +12,7 @@ Make an editor that:
     * impl highlighting in ui.rs
 * add syntax highlighting with tree-sitter
     * add basic color schemes
-* overflow on word jumps
+* overflow on word jumps, screen moving
 * windows from multi buffer view
 * baby git integration
 * improve screen moving

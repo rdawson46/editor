@@ -2,7 +2,7 @@ use crate::{
     command::{Command, CommandKey},
     buffer::{Buffer, BufferType, Mode},
     motion::MotionBuffer,
-    window::Window
+    // window::Window
 };
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
@@ -21,16 +21,19 @@ macro_rules! current_buf {
     };
 }
 
+/*
 macro_rules! current_win {
     ($e: expr) => {
         $e.windows[$e.win_ptr]
     };
 }
+*/
 
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,
     // pub windows: Vec<Window>,
+    // pub win_ptr: usize,
     pub buf_ptr: usize,
     pub command: Command,
     pub motion: MotionBuffer,
@@ -82,7 +85,6 @@ impl Editor {
     pub fn change_mode(&mut self, mode: Mode) {
         current_buf!(self).change_mode(mode);
 
-        // HACK: check if this worked, did not
         match mode {
             Mode::Insert | Mode::Command => {
                 self.set_message(None);
@@ -132,48 +134,6 @@ impl Editor {
                 (Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP)), None)
             }
         }
-    }
-
-    // TODO: create for buffer
-    pub fn buffer_display(&self) -> (String, String) {
-        let mut line_nums = "".to_string();
-        let mut text_string = "".to_string();
-
-        for (i, line) in current_buf!(self).lines.rope.lines().skip(current_buf!(self).ptr_y).enumerate() {
-            if i > current_buf!(self).ptr_y + usize::from(self.size.1) ||
-                i == current_buf!(self).lines.rope.len_lines() - 1 {
-                    break;
-            }
-
-            let mut i_str: String;
-            let current_line = usize::from(current_buf!(self).cursor.current.1);
-
-            if current_line != i {
-                if current_line > i {
-                    i_str = (current_line - i).to_string();
-                } else{
-                    i_str = (i - current_line).to_string();
-                }
-
-            } else {
-                i_str = (current_buf!(self).ptr_y + current_buf!(self).cursor.current.1 + 1).to_string();
-                if i_str.len() <= 2 {
-                    i_str.push(' ');
-                }
-            }
-
-            i_str.push_str("\n\r");
-
-            for char in i_str.chars() {
-                line_nums.push(char);
-            }
-
-            for char in line.chars() {
-                text_string.push(char);
-            }
-        }
-
-        (line_nums, text_string)
     }
 
     // NOTE: event functions
@@ -585,5 +545,18 @@ impl Editor {
     // TODO: modify cursor location
     pub fn resize(&mut self, new_size: (u16, u16)) {
         self.size = new_size;
+
+        for buffer in self.buffers.iter_mut() {
+            buffer.resize(new_size);
+        }
+    }
+}
+
+
+impl <'a> Editor {
+    // TODO: create for buffer
+    // move to buffer to handle more logic
+    pub fn buffer_display(&self) -> (Paragraph<'a>, Paragraph<'a>) {
+        current_buf!(self).ui()
     }
 }

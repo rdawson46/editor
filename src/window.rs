@@ -4,7 +4,7 @@ use color_eyre::eyre::Result;
 pub struct Window {
     pub size: (u16, u16),
     pub buffers: Vec<Buffer>,
-    pub buffer_ptr: usize, // will point to the buffer to be typed in
+    pub buf_ptr: usize, // will point to the buffer to be typed in
 }
 
 impl Window {
@@ -14,13 +14,18 @@ impl Window {
         return Window {
             size: (0, 0),
             buffers: vec![],
-            buffer_ptr: 0
+            buf_ptr: 0
         };
     }
 
     #[inline]
     pub fn add_buffer(&mut self, new_buffer: Buffer) -> Result<()> {
         self.buffers.push(new_buffer);
+        Ok(())
+    }
+
+    pub fn remove_buffer(&mut self) -> Result<()> {
+
         Ok(())
     }
 
