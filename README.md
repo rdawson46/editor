@@ -13,6 +13,8 @@ Make an editor that:
 * add syntax highlighting with tree-sitter
     * add basic color schemes
 * overflow on word jumps
+* windows from multi buffer view
+* baby git integration
 * improve screen moving
 * improve error handling
 * work out messages not displaying and clearing

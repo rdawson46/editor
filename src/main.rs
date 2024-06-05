@@ -1,13 +1,14 @@
 #[cfg(test)]
 mod test;
 
-mod editor;
-mod motion;
-mod command;
 mod ui;
 mod tui;
-mod word;
+mod editor;
 mod buffer;
+mod window;
+mod motion;
+mod command;
+mod word;
 mod colors;
 use crate::editor::Editor;
 use crate::buffer::Mode;
@@ -24,11 +25,11 @@ static X_OFFSET: usize = 5;
 
 async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
-
     let filename = filename.unwrap_or(String::from("."));
 
     let mut tui = Tui::new()?.tick_rate(1.0);
-    let mut editor = Editor::new(&filename)?;
+    let mut editor = Editor::new()?;
+    editor.new_buffer(&filename);
 
     tui.enter()?; 
     tui.start();

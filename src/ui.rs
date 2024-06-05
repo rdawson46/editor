@@ -1,5 +1,4 @@
 use std::rc::Rc;
-use std::usize;
 use crate::{
     Event,
     Tui,
@@ -12,12 +11,46 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph},
     Frame,
 };
+/*
+ * --> commented until ready
 use tree_sitter_rust;
 use tree_sitter_highlight::{
     HighlightEvent,
     Highlighter,
     HighlightConfiguration
 };
+*/
+
+/* ======== ROADMAP =======
+
+ - Thought Process:
+    * gonna need to minorly refactor this file
+        * getting lines from buffers/editor?
+
+ - Actions:
+    * Impl windows now to make life easier later
+
+ - Improvements:
+    * simplify ui func
+        * make func else where for getting the text and line numbers 
+    * give a size property to buffer
+        * will make it possible for multi-buffered windows
+            * could fix other issues with word jumping ⭐
+    * functions for resizing buffers & editor
+
+ - Current Functions:
+    * get_layouts
+    * ui
+    * update
+        
+ - New Functions Ideas:
+    * get_highlight
+    * file_type (editor)
+
+ - What Might Need To Happen:
+    * make cells impl for highlighting instead of rendering full lines
+
+======================== */
 
 
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
@@ -45,53 +78,9 @@ fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
 
 pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
     let (wrapper_layout, num_text_layout) = get_layouts(f);
-    
-    editor.size = (num_text_layout[1].width, num_text_layout[1].height);
-
-    // loop to make text for line nums and file text
-    let mut line_nums = "".to_string();
-    let mut text_string = "".to_string();
-
-    // for (i, line) in editor.buffers[editor.buf_ptr].lines.lines.iter().skip(editor.buffers[editor.buf_ptr].ptr_y.into()).enumerate() {
-    for (i, line) in editor.buffers[editor.buf_ptr].lines.rope.lines().skip(editor.buffers[editor.buf_ptr].ptr_y).enumerate() {
-        if i > editor.buffers[editor.buf_ptr].ptr_y + usize::from(editor.size.1) {
-            break;
-        }
-
-        if i == editor.buffers[editor.buf_ptr].lines.rope.len_lines() - 1 {
-            break;
-        }
-
-        let mut i_str: String;
-        let current_line = usize::from(editor.buffers[editor.buf_ptr].cursor.current.1);
-
-        if current_line != i {
-            if current_line > i {
-                i_str = (current_line - i).to_string();
-            } else{
-                i_str = (i - current_line).to_string();
-            }
-
-        } else {
-            i_str = (editor.buffers[editor.buf_ptr].ptr_y + editor.buffers[editor.buf_ptr].cursor.current.1 + 1).to_string();
-            if i_str.len() <= 2 {
-                i_str.push(' ');
-            }
-        }
-
-        i_str.push_str("\n\r");
-
-        for char in i_str.chars() {
-            line_nums.push(char);
-        }
-
-        for char in line.chars() {
-            text_string.push(char);
-        }
-    }
+    editor.resize((num_text_layout[1].width, num_text_layout[1].height));
 
     let (status, motion) = editor.mode_display();
-
     match motion {
         Some(motion) => {
             let status_motion = Layout::default()
@@ -102,13 +91,15 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
                 ])
                 .split(wrapper_layout[1]);
 
-            f.render_widget(status, status_motion[0]);
-            f.render_widget(motion, status_motion[1]);
+            f.render_widget(status.to_owned(), status_motion[0]);
+            f.render_widget(motion.to_owned(), status_motion[1]);
         },
         None => {
-            f.render_widget(status, wrapper_layout[1]);
+            f.render_widget(status.to_owned(), wrapper_layout[1]);
         }
     }
+
+    let (line_nums, text_string) = editor.buffer_display();
 
     f.render_widget(Paragraph::new(line_nums)
                     .alignment(ratatui::layout::Alignment::Right)

@@ -58,6 +58,7 @@ pub struct Lines{
 pub struct Buffer {
     pub buffer_type: BufferType,
     pub lines: Lines,
+    pub size: (u16, u16),
     pub ptr_y: usize,
     pub ptr_x: usize,
     pub cursor: Cursor,
@@ -68,7 +69,7 @@ pub struct Buffer {
 
 impl Buffer {
     // TODO: rework to incorporate open
-    pub fn new(path: &String) -> Result<Buffer> {
+    pub fn new(path: &String, window_size: (u16, u16)) -> Result<Buffer> {
         let parent_dir = env::current_dir()?;
 
         let mut buffer = Buffer {
@@ -76,6 +77,7 @@ impl Buffer {
             lines: Lines {
                 rope: Rope::new(),
             },
+            size: window_size,
             ptr_y: 0,
             ptr_x: 0,
             cursor: Cursor::new(),
@@ -436,8 +438,6 @@ impl Buffer {
                     File::open(&path)?
                     )?;
 
-                let source = rope.to_string();
-
                 self.lines.rope = rope;
                 self.file = Some(path.to_owned());
                 self.buffer_type = BufferType::File;
@@ -508,5 +508,9 @@ impl Buffer {
             }
         }
         return String::from("Can't write to directory")
+    }
+
+    pub fn resize(&mut self, new_size: (u16, u16)) {
+        self.size = new_size;
     }
 }

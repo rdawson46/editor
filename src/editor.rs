@@ -2,13 +2,12 @@ use crate::{
     command::{Command, CommandKey},
     buffer::{Buffer, BufferType, Mode},
     motion::MotionBuffer,
+    window::Window
 };
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
 use std::{
-    io::Write,
-    usize,
-    net::TcpStream,
+    io::Write, net::TcpStream, usize
 };
 use ratatui::{
     style::Stylize,
@@ -22,9 +21,16 @@ macro_rules! current_buf {
     };
 }
 
+macro_rules! current_win {
+    ($e: expr) => {
+        $e.windows[$e.win_ptr]
+    };
+}
+
 
 pub struct Editor {
     pub buffers: Vec<Buffer>,
+    // pub windows: Vec<Window>,
     pub buf_ptr: usize,
     pub command: Command,
     pub motion: MotionBuffer,
@@ -35,9 +41,7 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new(path: &String)-> Result<Editor> {
-        let buf = Buffer::new(path)?;
-
+    pub fn new()-> Result<Editor> {
         // port address for logger
         let port = match std::env::args().nth(2) {
             Some(value) => value,
@@ -50,7 +54,7 @@ impl Editor {
             if let Ok(mut stream) = stream {
                 if stream.write(b"connection test").is_ok() {
                     return Ok(Editor {
-                        buffers: vec![buf],
+                        buffers: vec![],
                         buf_ptr: 0,
                         command: Command::new(),
                         motion: MotionBuffer::new(),
@@ -64,7 +68,7 @@ impl Editor {
         } 
 
         return Ok(Editor {
-            buffers: vec![buf],
+            buffers: vec![],
             buf_ptr: 0,
             command: Command::new(),
             motion: MotionBuffer::new(),
@@ -130,12 +134,54 @@ impl Editor {
         }
     }
 
+    // TODO: create for buffer
+    pub fn buffer_display(&self) -> (String, String) {
+        let mut line_nums = "".to_string();
+        let mut text_string = "".to_string();
 
+        for (i, line) in current_buf!(self).lines.rope.lines().skip(current_buf!(self).ptr_y).enumerate() {
+            if i > current_buf!(self).ptr_y + usize::from(self.size.1) ||
+                i == current_buf!(self).lines.rope.len_lines() - 1 {
+                    break;
+            }
+
+            let mut i_str: String;
+            let current_line = usize::from(current_buf!(self).cursor.current.1);
+
+            if current_line != i {
+                if current_line > i {
+                    i_str = (current_line - i).to_string();
+                } else{
+                    i_str = (i - current_line).to_string();
+                }
+
+            } else {
+                i_str = (current_buf!(self).ptr_y + current_buf!(self).cursor.current.1 + 1).to_string();
+                if i_str.len() <= 2 {
+                    i_str.push(' ');
+                }
+            }
+
+            i_str.push_str("\n\r");
+
+            for char in i_str.chars() {
+                line_nums.push(char);
+            }
+
+            for char in line.chars() {
+                text_string.push(char);
+            }
+        }
+
+        (line_nums, text_string)
+    }
+
+    // NOTE: event functions
     /*
      * idea:
      * pass to function based off buffertype
      * empty will pretty much be same as file, will need modifications for saving
-    */
+     */
     pub fn key_press(&mut self, key: KeyEvent){
         match current_buf!(self).buffer_type {
             BufferType::Directory => self.directory_key_press(key),
@@ -450,7 +496,9 @@ impl Editor {
 
     pub fn new_buffer(&mut self, path: &String){
         // WARN: check for possible errors that can return
-        let buf = Buffer::new(path);
+
+        // TODO: fix this, determine what should be passed
+        let buf = Buffer::new(path, self.size);
 
         match buf {
             Ok(buf) => {
@@ -521,8 +569,7 @@ impl Editor {
     }
 
     // NOTE: functions for logging
-    //
-    // FIX: THIS MESS
+
     pub fn send(&mut self, message: String){
         let _ = {
             match &mut self.logger {
@@ -532,5 +579,11 @@ impl Editor {
                 None => {}
             }
         };
+    }
+
+    // NOTE: window management
+    // TODO: modify cursor location
+    pub fn resize(&mut self, new_size: (u16, u16)) {
+        self.size = new_size;
     }
 }
