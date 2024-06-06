@@ -9,6 +9,13 @@ use std::fs::{
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, Padding, Paragraph},
+    //prelude::{Span, Line},
+};
+use tree_sitter_rust;
+use tree_sitter_highlight::{
+    //Highlighter,
+    //HighlightEvent,
+    HighlightConfiguration,
 };
 use crossterm::{cursor, execute};
 use crate::word::{
@@ -538,13 +545,42 @@ impl Buffer {
 
         None
     }
+
+    fn create_rust_ts_config(&self) -> HighlightConfiguration {
+        let highlight_names = [
+            "keyword",
+        ];
+
+        let mut config = HighlightConfiguration::new(
+            tree_sitter_rust::language(),
+            "rust",
+            tree_sitter_rust::HIGHLIGHTS_QUERY,
+            tree_sitter_rust::INJECTIONS_QUERY,
+            tree_sitter_rust::TAGS_QUERY,
+        ).unwrap();
+
+        config.configure(&highlight_names);
+
+        config
+    }
 }
 
 
+// TODO: rename functions in this
 impl <'a>Buffer {
     // line nums, text field
     pub fn ui(&self) -> (Paragraph<'a>, Paragraph<'a>) {
-        let _file_type = self.get_valid_file_type();
+        let file_type = self.get_valid_file_type();
+
+        if let Some(t) = file_type {
+            match t {
+                // create config and then pass to 'complicated' renderer
+                FileType::Rust => {
+                    let _config = self.create_rust_ts_config();
+                    // return self.complicated_paragraphs(_config);
+                }
+            }
+        }
 
         let (line_string, text_string) = self.basic_text();
 
@@ -558,6 +594,75 @@ impl <'a>Buffer {
 
         (line_par, text_par) 
     }
+
+    // very slow
+    /*
+    fn complicated_paragraphs(&self, config: HighlightConfiguration) -> (Paragraph<'a>, Paragraph<'a>) {
+        let mut hl = Highlighter::new();
+        let text = self.lines.rope.to_string();
+
+        let highlights = hl.highlight(
+            &config,
+            text.as_bytes(),
+            None,
+            |_| None
+        ).unwrap();
+
+        let mut highlights = highlights.map(|x| x.unwrap());
+        let mut highlight_event = highlights.next();
+        let mut current_range = 0..0;
+        let mut active_style = 0;
+        let mut lines = vec![];
+        let mut current_line: Vec<Span> = vec![];
+
+        let starting_line = self.lines.rope.line_to_byte(self.ptr_y);
+        let ending_line = self.lines.rope.try_line_to_byte(self.ptr_y + self.size.1 as usize).unwrap_or(self.lines.rope.len_chars());
+
+        // TODO: loop through bits and apply theme
+        // will need to skip things for the loop
+        for (i, c) in text.chars().enumerate().skip(starting_line) {
+            // FIX: bad, maybe
+
+            if i > ending_line {
+                break;
+            }
+
+            while !current_range.contains(&i) {
+                match highlight_event {
+                    Some(h) => {
+                        match h {
+                            HighlightEvent::Source { start, end } => current_range = start..end,
+                            HighlightEvent::HighlightStart(s) => active_style = s.0,
+                            HighlightEvent::HighlightEnd => {},
+                        }
+                    },
+                    None => break,
+                }
+
+                highlight_event = highlights.next();
+            }
+
+            if c == '\n' {
+                lines.push(Line::from(current_line.clone()));
+                current_line.clear();
+                continue;
+            }
+
+            if active_style == 0 {
+                let s = Span::styled(c.to_string(), Style::default());
+                current_line.push(s);
+            } else {
+                let s = Span::styled(c.to_string(), Style::default().fg(Color::Magenta));
+                current_line.push(s);
+            }
+
+        }
+
+        // TODO: make lines paragraph
+
+        (Paragraph::new("no"), Paragraph::new(lines).block(Block::default().padding(Padding::new(1, 0, 0, 0))))
+    }
+    */
 
     fn basic_text(&self) -> (String, String) {
         let mut line_nums = "".to_string();
@@ -600,4 +705,3 @@ impl <'a>Buffer {
         (line_nums, text_string)
     }
 }
-

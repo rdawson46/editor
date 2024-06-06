@@ -7,20 +7,13 @@ use crate::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    /*
     style::{Color, Style},
     widgets::{Block, Padding, Paragraph},
+    */
     Frame,
 };
 
-/*
- * --> commented until ready
-use tree_sitter_rust;
-use tree_sitter_highlight::{
-    HighlightEvent,
-    Highlighter,
-    HighlightConfiguration
-};
-*/
 
 /* ======== ROADMAP =======
 
