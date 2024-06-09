@@ -9,12 +9,12 @@ use std::fs::{
 use ratatui::{
     style::{Color, Style},
     widgets::{Block, Padding, Paragraph},
-    //prelude::{Span, Line},
+    // prelude::{Span, Line},
 };
 use tree_sitter_rust;
 use tree_sitter_highlight::{
-    //Highlighter,
-    //HighlightEvent,
+    // Highlighter,
+    // HighlightEvent,
     HighlightConfiguration,
 };
 use crossterm::{cursor, execute};
@@ -116,7 +116,7 @@ impl Buffer {
                 match &self.buffer_type {
                     BufferType::Directory => {},
                     _ => {
-                        execute!(std::io::stderr(), cursor::SetCursorStyle::BlinkingBar).unwrap();
+                        execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBar).unwrap();
                         self.mode = mode;
                     }
                 }
@@ -533,6 +533,8 @@ impl Buffer {
     }
 
     // if returns some then I can use tree sitter
+    // will be needed for rendering
+    /*
     fn get_valid_file_type(&self) -> Option<FileType> {
         if let Some(path_buf) = &self.file {
             let extension = path_buf.as_path().extension();
@@ -563,6 +565,7 @@ impl Buffer {
 
         config
     }
+    */
 }
 
 
@@ -570,17 +573,20 @@ impl Buffer {
 impl <'a>Buffer {
     // line nums, text field
     pub fn ui(&self) -> (Paragraph<'a>, Paragraph<'a>) {
+        /*
         let file_type = self.get_valid_file_type();
 
         if let Some(t) = file_type {
             match t {
                 // create config and then pass to 'complicated' renderer
                 FileType::Rust => {
+                    // HACK: might cause some slow down
                     let _config = self.create_rust_ts_config();
-                    // return self.complicated_paragraphs(_config);
+                    return self.complicated_paragraphs(_config);
                 }
             }
         }
+        */
 
         let (line_string, text_string) = self.basic_text();
 
@@ -595,7 +601,6 @@ impl <'a>Buffer {
         (line_par, text_par) 
     }
 
-    // very slow
     /*
     fn complicated_paragraphs(&self, config: HighlightConfiguration) -> (Paragraph<'a>, Paragraph<'a>) {
         let mut hl = Highlighter::new();
@@ -608,59 +613,49 @@ impl <'a>Buffer {
             |_| None
         ).unwrap();
 
-        let mut highlights = highlights.map(|x| x.unwrap());
-        let mut highlight_event = highlights.next();
-        let mut current_range = 0..0;
-        let mut active_style = 0;
+        let mut active_style: usize = 0;
         let mut lines = vec![];
-        let mut current_line: Vec<Span> = vec![];
 
         let starting_line = self.lines.rope.line_to_byte(self.ptr_y);
-        let ending_line = self.lines.rope.try_line_to_byte(self.ptr_y + self.size.1 as usize).unwrap_or(self.lines.rope.len_chars());
+        // let ending_line = self.lines.rope.try_line_to_byte(self.ptr_y + self.size.1 as usize).unwrap_or(self.lines.rope.len_chars());
 
-        // TODO: loop through bits and apply theme
-        // will need to skip things for the loop
-        for (i, c) in text.chars().enumerate().skip(starting_line) {
-            // FIX: bad, maybe
+        for highlight_event in highlights {
+            match highlight_event.unwrap() {
+                // indicates what highlighter to use 
+                HighlightEvent::HighlightStart(s) => active_style = s.0,
 
-            if i > ending_line {
-                break;
+                // indicates range
+                HighlightEvent::Source { start, end } => {
+                    // TODO: do better checking here for eliminating loops
+                    if starting_line < start {
+                        continue;
+                    }
+
+                    // do line creation and push
+                    let mut t = String::new();
+                    t.clone_from(&text[start..end].to_string());
+
+                    let s: Span;
+                    if active_style != 0 {
+                        s = Span::styled(t, Style::default().fg(Color::Cyan));
+                    } else {
+                        s = Span::styled(t, Style::default());
+                    }
+                    lines.push(s);
+                },
+
+                HighlightEvent::HighlightEnd => {},
             }
-
-            while !current_range.contains(&i) {
-                match highlight_event {
-                    Some(h) => {
-                        match h {
-                            HighlightEvent::Source { start, end } => current_range = start..end,
-                            HighlightEvent::HighlightStart(s) => active_style = s.0,
-                            HighlightEvent::HighlightEnd => {},
-                        }
-                    },
-                    None => break,
-                }
-
-                highlight_event = highlights.next();
-            }
-
-            if c == '\n' {
-                lines.push(Line::from(current_line.clone()));
-                current_line.clear();
-                continue;
-            }
-
-            if active_style == 0 {
-                let s = Span::styled(c.to_string(), Style::default());
-                current_line.push(s);
-            } else {
-                let s = Span::styled(c.to_string(), Style::default().fg(Color::Magenta));
-                current_line.push(s);
-            }
-
         }
 
-        // TODO: make lines paragraph
-
-        (Paragraph::new("no"), Paragraph::new(lines).block(Block::default().padding(Padding::new(1, 0, 0, 0))))
+        // TODO: number lines with color
+        (Paragraph::new("no"),
+            Paragraph::new(lines)
+             .block(
+                 Block::default()
+                 .padding(Padding::new(1, 0, 0, 0))
+                 )
+         )
     }
     */
 
@@ -697,9 +692,7 @@ impl <'a>Buffer {
                 line_nums.push(char);
             }
 
-            for char in line.chars() {
-                text_string.push(char);
-            }
+            text_string.push_str(&line.to_string());
         }
 
         (line_nums, text_string)

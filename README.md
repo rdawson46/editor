@@ -9,15 +9,17 @@ Make an editor that:
 
 ## Todo
 * overflow on word jumps, screen moving
+    * moving screen with jumps
 * windows from multi buffer view
+    * simply start with two per window
+* terminal integration?
+    * undecided on this one
 * baby git integration
-* improve screen moving
 * improve error handling
-* get tree sitter working
-* add syntax highlighting with tree-sitter
-    * add basic color schemes
-* work out messages not displaying and clearing
-    * due to clearing message when changing mode
+* improve tree sitter working
+    * improve syntax highlighting with tree-sitter
+        * improve performance
+        * add basic color schemes
 * define runtime better for action (motions, commands, etc) handling
 * arrow key movement for buffer and command line
 * improve/fix testing suite
@@ -27,4 +29,7 @@ Make an editor that:
 * add functionality to file tree
     * refactor functions and system
 * add f/F/t/T
+* mouse integration
+* highlighting mode
+* copy/paste
 * ~improve commands ui
