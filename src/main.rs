@@ -10,14 +10,14 @@ mod motion;
 mod command;
 mod word;
 mod colors;
-use crate::editor::Editor;
-use crate::buffer::Mode;
-use crate::tui::{
-    Tui,
-    Event
+use crate::{
+    editor::Editor,
+    buffer::Mode,
+    tui::{Tui, Event},
+    ui::{ui, update}
 };
-use crate::ui::{ui, update};
 use color_eyre::eyre::Result;
+use std::sync::mpsc;
 
 
 static X_OFFSET: usize = 5;
@@ -28,15 +28,21 @@ async fn run() -> Result<()> {
     let filename = filename.unwrap_or(String::from("."));
 
     let mut tui = Tui::new()?.tick_rate(1.0);
-    let mut editor = Editor::new()?;
+
+    // TODO: assign an output to listen for actions to consume
+    let (input, _) = mpsc::channel();
+    let mut editor = Editor::new(input)?;
     editor.new_buffer(&filename);
 
     tui.enter()?; 
     tui.start();
 
+    tui.terminal.show_cursor()?;
+
     loop {
-        tui.terminal.show_cursor()?;
-        
+        // TODO: make function
+        editor.set_cursor(&mut tui);
+
         match &editor.buffers[editor.buf_ptr].mode {
             Mode::Command => {
                 tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
@@ -65,7 +71,6 @@ async fn run() -> Result<()> {
     }
 
     tui.exit()?; 
-
     Ok(())
 }
 

@@ -1,13 +1,18 @@
 use crate::{
-    command::{Command, CommandKey},
     buffer::{Buffer, BufferType, Mode},
-    motion::MotionBuffer,
+    command::{Command, CommandKey},
+    motion::{Action, Motions},
+    tui::Tui,
+    X_OFFSET
     // window::Window
 };
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
 use color_eyre::eyre::Result;
 use std::{
-    io::Write, net::TcpStream, usize
+    io::Write,
+    net::TcpStream,
+    usize,
+    sync::{mpsc::Sender, Arc}
 };
 use ratatui::{
     style::Stylize,
@@ -36,7 +41,7 @@ pub struct Editor {
     // pub win_ptr: usize,
     pub buf_ptr: usize,
     pub command: Command,
-    pub motion: MotionBuffer,
+    pub motion: Arc<Motions>,
     pub should_quit: bool,
     pub size: (u16, u16),
     pub logger: Option<TcpStream>,
@@ -44,7 +49,7 @@ pub struct Editor {
 }
 
 impl Editor {
-    pub fn new()-> Result<Editor> {
+    pub fn new(output: Sender<Action>)-> Result<Editor> {
         // port address for logger
         let port = match std::env::args().nth(2) {
             Some(value) => value,
@@ -60,7 +65,7 @@ impl Editor {
                         buffers: vec![],
                         buf_ptr: 0,
                         command: Command::new(),
-                        motion: MotionBuffer::new(),
+                        motion: Motions::new(output),
                         should_quit: false,
                         size: (0, 0),
                         logger: Some(stream),
@@ -74,7 +79,7 @@ impl Editor {
             buffers: vec![],
             buf_ptr: 0,
             command: Command::new(),
-            motion: MotionBuffer::new(),
+            motion: Motions::new(output),
             should_quit: false,
             size: (0, 0),
             logger: None,
@@ -103,12 +108,12 @@ impl Editor {
                 // TODO: temp idea for displaying motions
                 let mut motion_str = "".to_string();
 
-                match &self.motion.number {
+                match &self.motion.motion_buffer.number {
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
                 }
 
-                match &self.motion.action {
+                match &self.motion.motion_buffer.action {
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
                 }
@@ -168,16 +173,16 @@ impl Editor {
                     },
                     KeyCode::Char(value) => {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.motion.clear();
+                            self.motion.motion_buffer.clear();
                         } else {
-                            let res = self.motion.push(value);
+                            let res = self.motion.motion_buffer.push(value);
 
                             match res {
                                 Some(_) => {
                                     // maybe will use, maybe not, whos to say
                                     //let _ = self.direc_parse();
                                     let _ = self.parse();
-                                    self.motion.clear();
+                                    self.motion.motion_buffer.clear();
                                 },
                                 None => {}
                             }
@@ -201,14 +206,14 @@ impl Editor {
                             let update = self.save();
                             self.set_message(Some(update.clone()));
                         } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.motion.clear();
+                            self.motion.motion_buffer.clear();
                         } else {
-                            let res = self.motion.push(value);
+                            let res = self.motion.motion_buffer.push(value);
 
                             match res {
                                 Some(_) => {
                                     let _ = self.parse();
-                                    self.motion.clear();
+                                    self.motion.motion_buffer.clear();
                                 },
                                 None => {}
                             }
@@ -300,23 +305,23 @@ impl Editor {
         //  might need an action function
         //  will probably remove returned result
     pub fn parse(&mut self) -> Result<u32, &str> {
-        let count = match &self.motion.number{
+        let count = match &self.motion.motion_buffer.number{
             Some(value) => value.parse::<u32>().unwrap_or(0),
             None => 1,
         };
 
-        let motion = match &self.motion.motion {
+        let motion = match &self.motion.motion_buffer.motion {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
 
         // TODO: figure out how have these commands run
-        let action = match &self.motion.action {
+        let action = match &self.motion.motion_buffer.action {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
 
-        let action_args = match &self.motion.action_arg {
+        let action_args = match &self.motion.motion_buffer.action_arg {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
@@ -548,6 +553,20 @@ impl Editor {
 
         for buffer in self.buffers.iter_mut() {
             buffer.resize(new_size);
+        }
+    }
+
+    pub fn set_cursor(&self, tui: &mut Tui) {
+        match &current_buf!(self).mode {
+            Mode::Command => {
+                tui.terminal.set_cursor((self.command.text.len() - 1).try_into().unwrap(), tui.size.1).unwrap();
+            },
+            _ => {
+                tui.terminal.set_cursor(
+                    (current_buf!(self).cursor.current.0 + X_OFFSET).try_into().unwrap(),
+                    (current_buf!(self).cursor.current.1).try_into().unwrap()
+                ).unwrap();
+            }
         }
     }
 }
