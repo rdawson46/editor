@@ -15,42 +15,6 @@ use ratatui::{
 };
 
 
-/* ======== ROADMAP =======
-
- - Thought Process:
-    * gonna need to minorly refactor this file
-        * getting lines from buffers/editor?
-
- - Actions:
-    * Impl windows now to make life easier later
-
- - Improvements:
-    * simplify ui func
-        * make func else where for getting the text and line numbers 
-    * give a size property to buffer
-        * will make it possible for multi-buffered windows
-            * could fix other issues with word jumping ⭐
-    * functions for resizing buffers & editor
-
- - Current Functions:
-    * get_layouts
-    * ui
-    * update
-        
- - New Functions Ideas:
-    * get_highlight
-    * file_type (editor)
-
- - What Might Need To Happen:
-    * make cells impl for highlighting instead of rendering full lines
-
- - Issues:
-    * might have to make a cell system
-        * coloring will be difficult without
-
-======================== */
-
-
 fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
     // wrapper_layout[0] is for the text and line numbers
     // wrapper_layout[1] is for the command view
@@ -96,20 +60,6 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
             f.render_widget(status.to_owned(), wrapper_layout[1]);
         }
     }
-
-    /*
-    let (line_nums, text_string) = editor.buffer_display();
-
-    f.render_widget(Paragraph::new(line_nums)
-                    .alignment(ratatui::layout::Alignment::Right)
-                    .style(Style::default().fg(Color::DarkGray)),
-                    num_text_layout[0]);
-    
-    f.render_widget(Paragraph::new(text_string)
-                    .block(Block::default()
-                    .padding(Padding::new(1, 0, 0, 0))),
-                    num_text_layout[1]);
-    */
 
     let (line_par, text_par) = editor.buffer_display();
 

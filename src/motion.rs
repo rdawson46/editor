@@ -1,4 +1,4 @@
-use std::sync::{mpsc, Arc};
+use tokio::sync::mpsc;
 
 // TODO: figure how to do leader
 pub struct MotionBuffer {
@@ -77,47 +77,44 @@ impl Action {
     }
 }
 
-pub struct Motions {
-    pub listener: mpsc::Receiver<char>,
-    pub sender: mpsc::Sender<char>,
-    pub motion_buffer: MotionBuffer,
-    pub output: mpsc::Sender<Action>,
+pub struct InputMotion {
+    pub sender: mpsc::UnboundedSender<char>,
 }
 
-impl Motions {
-    pub fn new(output: mpsc::Sender<Action>) -> Arc<Self> {
-        let (sender, listener) = mpsc::channel();
-        let motion_b = MotionBuffer::new();
-
-        let motion = Motions {
-            listener,
-            sender,
-            motion_buffer: motion_b,
-            output
-        };
-        Arc::new(motion)
+impl InputMotion {
+    fn new(sender: mpsc::UnboundedSender<char>) -> Self {
+        InputMotion { sender }
     }
 
-    pub fn send(&mut self, x: char) -> Option<char> {
+    pub async fn send(&mut self, x: char) -> Option<char> {
         let res = self.sender.send(x);
         if let Ok(_) = res {
             return None;
         }
         Some(res.unwrap_err().0)
     }
+}
 
-    pub fn listen(&mut self) {
-        for c in &self.listener {
-            if let Some(_) = self.motion_buffer.push(c) {
-                let action = Action::new(&mut self.motion_buffer);
-                let out = self.output.send(action);
+pub struct OutputMotion {
+    pub listener: mpsc::UnboundedReceiver<char>,
+    pub motion_buffer: MotionBuffer,
+    pub output: mpsc::Sender<Action>,
+}
 
-                if out.is_err() {
-                    break
-                }
-            }
-        }
+impl OutputMotion {
+    pub fn new(output: mpsc::Sender<Action>) -> (Self, InputMotion) {
+        let (sender, listener) = mpsc::unbounded_channel::<char>();
+        let motion_b = MotionBuffer::new();
 
-        panic!("Some thread died on me")
+        let motion = OutputMotion {
+            listener,
+            motion_buffer: motion_b,
+            output
+        };
+
+        (motion, InputMotion::new(sender))
+    }
+
+    pub async fn start(&mut self) {
     }
 }

@@ -327,6 +327,7 @@ impl Buffer {
     }
 
     // TODO: calc viewport if needed
+    // and improve error handling
     pub fn move_next_word(&mut self, size: (u16, u16)) {
         // FIX: calc viewport
 
@@ -343,7 +344,7 @@ impl Buffer {
                 self.cursor.current.1 = line_num.unwrap_or(0);
 
                 let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1).unwrap_or(0);
-                let line_pos = idx - line_idx;
+                let line_pos = idx.checked_sub(line_idx).unwrap_or(line_idx);
                 self.cursor.current.0 = line_pos;
             }
         }

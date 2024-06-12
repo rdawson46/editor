@@ -78,7 +78,7 @@ impl Tui {
     // NOTE: kicks off tui usage
     pub fn start(&mut self) {
         let tick_rate = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
-        let render_rate = std::time::Duration::from_secs_f64(1.0 / 30.0);
+        let render_rate = std::time::Duration::from_secs_f64(1.0 / 5.0);
         let _event_tx = self.event_tx.clone();
 
         let task = tokio::spawn(async move {

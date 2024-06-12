@@ -12,15 +12,38 @@ mod word;
 mod colors;
 use crate::{
     editor::Editor,
-    buffer::Mode,
     tui::{Tui, Event},
-    ui::{ui, update}
+    ui::{ui, update},
 };
+use tokio::select;
 use color_eyre::eyre::Result;
-use std::sync::mpsc;
 
 
 static X_OFFSET: usize = 5;
+
+/* ====================
+ Map to improve event loop: 
+  Prep:
+    - change cursor interface
+    - establish a widget for editor
+
+  After:
+    - change tui channels and connect reciever to editor
+    - make channel between motion and editor, and then in reverse
+    
+  Goal in main:
+    select! {
+        event = channel from tui { handle event },
+        motion/action = channel from motion { handle funcs to modify buffer },
+    }
+
+    handle ui {
+        draw()
+        color() // color cells for syntax highlighting
+    }
+
+   ⭐ don't render ui on updates but by frame rate ⭐
+==================== */
 
 
 async fn run() -> Result<()> {
@@ -30,40 +53,40 @@ async fn run() -> Result<()> {
     let mut tui = Tui::new()?.tick_rate(1.0);
 
     // TODO: assign an output to listen for actions to consume
-    let (input, _) = mpsc::channel();
-    let mut editor = Editor::new(input)?;
+    let mut editor = Editor::new()?;
     editor.new_buffer(&filename);
 
     tui.enter()?; 
     tui.start();
 
-    tui.terminal.show_cursor()?;
 
     loop {
-        // TODO: make function
+        // TODO: Switch cursor interface used
+        // won't break the cursor
         editor.set_cursor(&mut tui);
 
-        match &editor.buffers[editor.buf_ptr].mode {
-            Mode::Command => {
-                tui.terminal.set_cursor((editor.command.text.len() + 1).try_into().unwrap(), tui.size.1)?;
-            },
-            _ => {
-                tui.terminal.set_cursor(
-                    (editor.buffers[editor.buf_ptr].cursor.current.0 + X_OFFSET).try_into().unwrap(),
-                    (editor.buffers[editor.buf_ptr].cursor.current.1).try_into().unwrap()
-                )?;
-            }
-        };
-
-        if tui.update {
-            tui.update = false;
-            tui.terminal.draw(|f| {
-                ui(f, &mut editor);
-            })?;
-        }
+        tui.terminal.draw(|f| {
+            ui(f, &mut editor);
+            // color(f)???  // might be helpful with highlighting
+        })?;
         
-        let event = tui.next().await?;
-        update(&mut editor, event, &mut tui);
+        select! {
+            event = tui.next() => {
+                match event {
+                    Ok(event) => update(&mut editor, event, &mut tui),
+                    Err(_) => {}
+                }
+            },
+
+            /*
+            motion_event = editor.next_motion() => {
+                match motion_event {
+                    Ok(action) => {},
+                    Err(_) => {}
+                }
+            },
+            */
+        }
 
         if editor.should_quit {
             break;
