@@ -7,7 +7,8 @@ Make an editor that:
 * configurable
 * customizable
 
-## Todo
+## Test
+* Restablish Motions, KeyEvents, and event loop
 * overflow on word jumps, screen moving
     * moving screen with jumps
 * windows from multi buffer view

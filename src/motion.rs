@@ -1,3 +1,5 @@
+use std::sync::{mpsc, Arc};
+
 // TODO: figure how to do leader
 pub struct MotionBuffer {
     pub action: Option<String>,
@@ -60,5 +62,70 @@ impl MotionBuffer {
         self.action = None;
         self.number = None;
         self.motion = None;
+    }
+}
+
+struct Action {
+    action: Option<String>,
+    action_arg: Option<String>,
+    number: Option<String>,
+    motion: Option<String>,
+}
+
+impl Action {
+    fn new(motion_b: &mut MotionBuffer) -> Self {
+        let action = Action {
+            action: motion_b.action.clone(),
+            action_arg: motion_b.action_arg.clone(),
+            number: motion_b.number.clone(),
+            motion: motion_b.motion.clone(),
+        };
+        motion_b.clear();
+        action
+    }
+}
+
+struct Motions {
+    listener: mpsc::Receiver<char>,
+    sender: mpsc::Sender<char>,
+    motion: MotionBuffer,
+    output: mpsc::Sender<Action>,
+}
+
+impl Motions {
+    fn new(output: mpsc::Sender<Action>) -> Arc<Self> {
+        let (sender, listener) = mpsc::channel();
+        let motion_b = MotionBuffer::new();
+
+        let motion = Motions {
+            listener,
+            sender,
+            motion: motion_b,
+            output
+        };
+        Arc::new(motion)
+    }
+
+    fn send(&mut self, x: char) -> Option<char> {
+        let res = self.sender.send(x);
+        if let Ok(_) = res {
+            return None;
+        }
+        Some(res.unwrap_err().0)
+    }
+
+    fn listen(&mut self) {
+        for c in &self.listener {
+            if let Some(_) = self.motion.push(c) {
+                let action = Action::new(&mut self.motion);
+                let out = self.output.send(action);
+
+                if out.is_err() {
+                    break
+                }
+            }
+        }
+
+        panic!("Some thread died on me")
     }
 }
