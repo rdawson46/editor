@@ -71,7 +71,15 @@ impl Tui {
 
         let task: Option<JoinHandle<()>> = None;
 
-        Ok(Tui { terminal, size, task, event_rx: rx, event_tx: tx, update: true, tick_rate })
+        Ok(Tui {
+            terminal,
+            size,
+            task,
+            event_rx: rx,
+            event_tx: tx,
+            update: true,
+            tick_rate
+        })
     }
 
     
@@ -83,12 +91,12 @@ impl Tui {
 
         let task = tokio::spawn(async move {
             let mut reader = crossterm::event::EventStream::new();
-            let mut tick_interval = tokio::time::interval(tick_rate);
-            let mut render_interval = tokio::time::interval(render_rate);
+            // let mut tick_interval = tokio::time::interval(tick_rate);
+            // let mut render_interval = tokio::time::interval(render_rate);
             
             loop{
-                let tick_delay = tick_interval.tick();
-                let render_delay = render_interval.tick();
+                // let tick_delay = tick_interval.tick();
+                // let render_delay = render_interval.tick();
                 let crossterm_event = reader.next().fuse();
 
                 tokio::select! {
@@ -113,12 +121,14 @@ impl Tui {
                             None => {},
                         }
                     },
+                    /*
                     _ = tick_delay => {
                         _event_tx.send(Event::Tick).unwrap();
                     },
                     _ = render_delay => {
                         _event_tx.send(Event::Render).unwrap();
                     }
+                    */
                 }
             }
         });

@@ -67,4 +67,8 @@ impl Command {
 
         ck
     }
+
+    pub fn clear(&mut self) {
+        self.text.clear();
+    }
 }

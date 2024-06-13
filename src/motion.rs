@@ -1,4 +1,8 @@
-use tokio::sync::mpsc;
+use tokio::sync::{
+    watch,
+    mpsc,
+};
+use color_eyre::eyre::Result;
 
 // TODO: figure how to do leader
 pub struct MotionBuffer {
@@ -57,6 +61,8 @@ impl MotionBuffer {
     }
 }
 
+
+// WORK IN PROGRESS ==========
 pub struct Action {
     action: Option<String>,
     action_arg: Option<String>,
@@ -77,44 +83,50 @@ impl Action {
     }
 }
 
-pub struct InputMotion {
-    pub sender: mpsc::UnboundedSender<char>,
+// DONT INCLUDE IN EDITOR, JUST GIVE EDITOR THE SENDER FOR LISTENER
+// AND THE RECIEVER FROM OUTPUT
+// PUT MOTIONHANDLER ON OTHER THREAD & JOINHANDLER
+// or ...
+pub struct MotionHandler {
+    pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
+    pub motion_buffer: MotionBuffer, // used to parse motions
+    pub output: mpsc::UnboundedSender<Action>, // send out action when ready to use
 }
 
-impl InputMotion {
-    fn new(sender: mpsc::UnboundedSender<char>) -> Self {
-        InputMotion { sender }
-    }
 
-    pub async fn send(&mut self, x: char) -> Option<char> {
-        let res = self.sender.send(x);
-        if let Ok(_) = res {
-            return None;
-        }
-        Some(res.unwrap_err().0)
-    }
-}
-
-pub struct OutputMotion {
-    pub listener: mpsc::UnboundedReceiver<char>,
-    pub motion_buffer: MotionBuffer,
-    pub output: mpsc::Sender<Action>,
-}
-
-impl OutputMotion {
-    pub fn new(output: mpsc::Sender<Action>) -> (Self, InputMotion) {
+impl MotionHandler {
+    pub fn new(output: mpsc::UnboundedSender<Action>) -> (Self, mpsc::UnboundedSender<char>) {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
         let motion_b = MotionBuffer::new();
 
-        let motion = OutputMotion {
+        let motion = MotionHandler {
             listener,
             motion_buffer: motion_b,
             output
         };
 
-        (motion, InputMotion::new(sender))
+        (motion, sender)
     }
 
-    pub async fn start(&mut self) {
+    pub async fn listen(&mut self) {
+        let recv = self.listener.recv().await;
+
+        if let Some(c) = recv {
+            let c = c.clone();
+            let x = self.motion_buffer.push(c);
+
+            if let Some(_) = x {
+                let action = Action::new(&mut self.motion_buffer);
+                let _res = self.send(action);
+            }
+        }
+    }
+
+    fn send(&mut self, a: Action) -> Option<Action> {
+        let res = self.output.send(a);
+        if let Ok(_) = res {
+            return None;
+        }
+        Some(res.unwrap_err().0)
     }
 }

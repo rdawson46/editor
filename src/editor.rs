@@ -1,9 +1,9 @@
 use crate::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
-    motion::MotionBuffer,
-    tui::Tui,
-    X_OFFSET
+    motion::{Action, MotionBuffer, MotionHandler},
+    tui::Event,
+    X_OFFSET,
     // window::Window
 };
 use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
@@ -17,6 +17,15 @@ use ratatui::{
     style::Stylize,
     prelude::{Style, Alignment},
     widgets::{Paragraph, Borders, Block},
+    Frame
+};
+use tokio::{
+    sync::mpsc,
+    sync::mpsc::{
+        UnboundedReceiver,
+        UnboundedSender,
+    },
+    task::JoinHandle,
 };
 
 macro_rules! current_buf {
@@ -44,7 +53,11 @@ pub struct Editor {
     pub should_quit: bool,
     pub size: (u16, u16),
     pub logger: Option<TcpStream>,
-    pub message: Option<String>
+    pub message: Option<String>,
+
+    pub motion_sender: UnboundedSender<char>,
+    pub action_listener: UnboundedReceiver<Action>,
+    pub motion_task: Option<JoinHandle<()>>,
 }
 
 impl Editor {
@@ -54,6 +67,23 @@ impl Editor {
             Some(value) => value,
             None => "".to_string()
         };
+
+        /*
+         * make Motions struct here and spawn a thread
+         * also get the sender<char> and assign to thread
+         */
+
+        let (action_sender, action_listener) = mpsc::unbounded_channel(); 
+
+        // motion sender is for key events
+        let (mut motion, motion_sender) = MotionHandler::new(action_sender);
+
+        let motion_task = tokio::spawn(async move {
+            // thread for motion biotch
+            loop {
+                motion.listen().await;
+            }
+        });
 
         if port != "" {
             let stream = TcpStream::connect(format!("127.0.0.1:{}", port));
@@ -69,6 +99,10 @@ impl Editor {
                         size: (0, 0),
                         logger: Some(stream),
                         message: None,
+
+                        action_listener,
+                        motion_task: Some(motion_task),
+                        motion_sender,
                     });
                 } 
             }
@@ -82,7 +116,11 @@ impl Editor {
             should_quit: false,
             size: (0, 0),
             logger: None,
-            message: None
+            message: None,
+
+            action_listener,
+            motion_task: Some(motion_task),
+            motion_sender,
         });
     }
 
@@ -92,6 +130,7 @@ impl Editor {
         match mode {
             Mode::Insert | Mode::Command => {
                 self.set_message(None);
+                self.command.clear();
             }
             _ => (),
         }
@@ -555,22 +594,28 @@ impl Editor {
         }
     }
 
-    pub fn set_cursor(&self, tui: &mut Tui) {
-        tui.terminal.show_cursor().unwrap();
-
+    // TODO: Swap interface with frame interface
+    // this function might just get deleted
+    pub fn set_cursor(&self, f: &mut Frame<'_>) {
         match &current_buf!(self).mode {
             Mode::Command => {
-                tui.terminal.set_cursor((self.command.text.len() + 1).try_into().unwrap(), tui.size.1).unwrap();
+                f.set_cursor(
+                    (self.command.text.len() + 1).try_into().unwrap(),
+                    f.size().height
+                );
             },
             _ => {
-                let attempt = tui.terminal.set_cursor(
+                f.set_cursor(
                     (current_buf!(self).cursor.current.0 + X_OFFSET).try_into().unwrap(),
                     (current_buf!(self).cursor.current.1).try_into().unwrap()
                 );
-
-                if attempt.is_err() {}
             }
         };
+    }
+
+    pub async fn next_action(&mut self) -> Result<Action> {
+        let event = self.action_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
+        event
     }
 }
 
