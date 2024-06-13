@@ -58,8 +58,6 @@ async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
     let filename = filename.unwrap_or(String::from("."));
 
-    // return tui and a recv channel
-    // let mut (tui, event_recv) = Tui::new()?.tick_rate(1.0);
     let mut tui = Tui::new()?.tick_rate(1.0);
 
     let mut editor = Editor::new()?;
@@ -68,11 +66,7 @@ async fn run() -> Result<()> {
     tui.enter()?; 
     tui.start();
 
-
     loop {
-        // TODO: Switch cursor interface used
-        // won't break the cursor
-
         tui.terminal.draw(|f| {
             editor.set_cursor(f);
             ui(f, &mut editor);
@@ -91,23 +85,6 @@ async fn run() -> Result<()> {
                 editor.send("motion reciever".to_string());
                 // editor.handle_action()
             }
-            /*
-            event = tui.next() => {
-                match event {
-                    Ok(event) => update(&mut editor, event, &mut tui),
-                    Err(_) => {}
-                }
-            },
-            */
-
-            /*
-            motion_event = editor.next_motion() => {
-                match motion_event {
-                    Ok(action) => {},
-                    Err(_) => {}
-                }
-            },
-            */
         }
 
         if editor.should_quit {

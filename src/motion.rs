@@ -1,8 +1,4 @@
-use tokio::sync::{
-    watch,
-    mpsc,
-};
-use color_eyre::eyre::Result;
+use tokio::sync::mpsc;
 
 // TODO: figure how to do leader
 pub struct MotionBuffer {

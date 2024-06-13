@@ -2,7 +2,6 @@ use crate::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
     motion::{Action, MotionBuffer, MotionHandler},
-    tui::Event,
     X_OFFSET,
     // window::Window
 };
@@ -68,10 +67,6 @@ impl Editor {
             None => "".to_string()
         };
 
-        /*
-         * make Motions struct here and spawn a thread
-         * also get the sender<char> and assign to thread
-         */
 
         let (action_sender, action_listener) = mpsc::unbounded_channel(); 
 
