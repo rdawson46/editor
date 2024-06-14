@@ -11,12 +11,14 @@ use ratatui::{
     widgets::{Block, Padding, Paragraph},
     // prelude::{Span, Line},
 };
+/*
 use tree_sitter_rust;
 use tree_sitter_highlight::{
     // Highlighter,
     // HighlightEvent,
     HighlightConfiguration,
 };
+*/
 use crossterm::{cursor, execute};
 use crate::word::{
     find_word_end_forward,

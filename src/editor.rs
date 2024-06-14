@@ -13,10 +13,14 @@ use std::{
     usize,
 };
 use ratatui::{
+    prelude::{Alignment, Style},
     style::Stylize,
-    prelude::{Style, Alignment},
-    widgets::{Paragraph, Borders, Block},
-    Frame
+    widgets::{
+        Block,
+        Borders,
+        Paragraph,
+    },
+    Frame,
 };
 use tokio::{
     sync::mpsc,
@@ -613,7 +617,6 @@ impl Editor {
         event
     }
 }
-
 
 impl <'a> Editor {
     // TODO: create for buffer

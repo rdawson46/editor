@@ -1,15 +1,17 @@
 #[cfg(test)]
 mod test;
 
-mod ui;
-mod tui;
-mod editor;
 mod buffer;
-mod window;
-mod motion;
-mod command;
-mod word;
 mod colors;
+mod command;
+mod editor;
+mod motion;
+mod tui;
+mod ui;
+mod widgets;
+mod window;
+mod word;
+
 use crate::{
     editor::Editor,
     tui::{Tui, Event},
@@ -26,7 +28,10 @@ static X_OFFSET: usize = 5;
   Prep:
     - change cursor interface ✅
     - clear command line on ctrl+c ✅
-    - establish a widget for editor
+    - establish a widget for:
+        - editor
+        - buffer
+        - status line
     - figure out to get text from motionbuffer in MotionHandler
 
   After:
