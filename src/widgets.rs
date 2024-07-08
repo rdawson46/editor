@@ -11,7 +11,7 @@ use ratatui::{
 };
 use crate::{
     editor::Editor,
-    buffer::Buffer,
+    buffer::{Buffer, Mode},
 };
 
 struct BufferWidget {
@@ -34,17 +34,16 @@ impl Widget for BufferWidget {
     }
 }
 
-// what classifies this?
 struct EditorWidget {
     status_line: StatuslineWidget,
-    buffer: Option<BufferWidget>,
+    buffer: BufferWidget,
 }
 
 impl EditorWidget {
     fn new(e: &Editor) -> Self {
         return EditorWidget {
-            status_line: StatuslineWidget::new(),
-            buffer: None,
+            status_line: StatuslineWidget::new(e),
+            buffer: BufferWidget::new(&e.buffers[e.buf_ptr]),
         };
     }
 }
@@ -52,21 +51,23 @@ impl EditorWidget {
 
 impl Widget for EditorWidget {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
-        
+
     }
 }
 
 struct StatuslineWidget {
     command: String,
     motion: String,
+    mode: Mode,
     location: (u16, u16),
 }
 
 impl StatuslineWidget {
-    pub fn new() -> Self {
+    pub fn new(e: &Editor) -> Self {
         return StatuslineWidget {
             command: "".to_string(),
             motion: "".to_string(),
+            mode: e.buffers[e.buf_ptr].mode,
             location: (0,0),
         }
     }
@@ -74,6 +75,9 @@ impl StatuslineWidget {
 
 impl Widget for StatuslineWidget {
     fn render(self, area: ratatui::prelude::Rect, buf: &mut ratatui::prelude::Buffer) {
+        buf.set_string(area.left(), area.top(), self.command, Style::default());
         
+        let location = format!("[{}:{}]", self.location.0, self.location.1);
+        buf.set_string(area.right(), area.top(), location, Style::default());
     }
 }
