@@ -86,9 +86,9 @@ async fn run() -> Result<()> {
                 }
             },
 
-            _action = editor.next_action() => {
+            action = editor.next_action() => {
                 editor.send("motion reciever".to_string());
-                // editor.handle_action()
+                editor.handle_action(action);
             }
         }
 

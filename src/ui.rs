@@ -7,10 +7,6 @@ use crate::{
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
-    /*
-    style::{Color, Style},
-    widgets::{Block, Padding, Paragraph},
-    */
     Frame,
 };
 

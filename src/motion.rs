@@ -84,6 +84,7 @@ impl Action {
 // PUT MOTIONHANDLER ON OTHER THREAD & JOINHANDLER
 // or ...
 pub struct MotionHandler {
+    // TODO: might need to make this a listener for KeyEvents
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
     pub motion_buffer: MotionBuffer, // used to parse motions
     pub output: mpsc::UnboundedSender<Action>, // send out action when ready to use

@@ -237,6 +237,7 @@ impl Editor {
             Mode::Insert => self.insert_key(key),
             Mode::Command => self.command_line_key(key),
             Mode::Normal => {
+                // this will create issue moving forward
                 match key.code {
                     KeyCode::Char(value) => {
                         if value == 's' && key.modifiers == KeyModifiers::CONTROL {
@@ -245,6 +246,7 @@ impl Editor {
                         } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             self.motion.clear();
                         } else {
+
                             let res = self.motion.push(value);
 
                             match res {
@@ -615,6 +617,43 @@ impl Editor {
     pub async fn next_action(&mut self) -> Result<Action> {
         let event = self.action_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
         event
+    }
+
+    pub fn handle_action(&mut self, action: Result<Action>) {
+        /*
+        match action.as_str() {
+            ":" => self.change_mode(Mode::Command),
+            "j" => current_buf!(self).move_down(self.size),
+            "k" => current_buf!(self).move_up(),
+            "h" => current_buf!(self).move_left(),
+            "l" => current_buf!(self).move_right(),
+            "i" => self.change_mode(Mode::Insert),
+            "a" => {
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_right();
+            },
+            "O" => {
+                current_buf!(self).new_line_above(self.size);
+            },
+            "o" => {
+                current_buf!(self).new_line_below(self.size);
+            },
+            "w" => current_buf!(self).move_next_word(self.size),
+            "b" => current_buf!(self).move_back_word(self.size),
+            "e" => current_buf!(self).move_end_word(self.size),
+            "0" => current_buf!(self).move_begin_of_line(),
+            "$" => current_buf!(self).move_end_of_line(),
+            "I" => {
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_begin_of_line();
+            },
+            "A" => {
+                current_buf!(self).change_mode(Mode::Insert);
+                current_buf!(self).move_end_of_line();
+            },
+            _ => {}
+        }
+        */
     }
 }
 
