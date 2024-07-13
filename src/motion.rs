@@ -1,4 +1,4 @@
-use tokio::sync::mpsc;
+use tokio::{sync::mpsc, select};
 
 // TODO: figure how to do leader
 pub struct MotionBuffer {
@@ -6,6 +6,19 @@ pub struct MotionBuffer {
     pub action_arg: Option<String>,
     pub number: Option<String>,
     pub motion: Option<String>,
+}
+
+impl Clone for MotionBuffer {
+    fn clone(&self) -> Self {
+        let mut new_mb = MotionBuffer::new();
+
+        new_mb.action = self.action.clone();
+        new_mb.action_arg = self.action_arg.clone();
+        new_mb.number = self.number.clone();
+        new_mb.motion = self.motion.clone();
+
+        new_mb
+    }
 }
 
 impl MotionBuffer {
@@ -57,69 +70,54 @@ impl MotionBuffer {
     }
 }
 
-
 // WORK IN PROGRESS ==========
-pub struct Action {
-    action: Option<String>,
-    action_arg: Option<String>,
-    number: Option<String>,
-    motion: Option<String>,
-}
-
-impl Action {
-    fn new(motion_b: &mut MotionBuffer) -> Self {
-        let action = Action {
-            action: motion_b.action.clone(),
-            action_arg: motion_b.action_arg.clone(),
-            number: motion_b.number.clone(),
-            motion: motion_b.motion.clone(),
-        };
-        motion_b.clear();
-        action
-    }
-}
-
-// DONT INCLUDE IN EDITOR, JUST GIVE EDITOR THE SENDER FOR LISTENER
-// AND THE RECIEVER FROM OUTPUT
-// PUT MOTIONHANDLER ON OTHER THREAD & JOINHANDLER
-// or ...
 pub struct MotionHandler {
     // TODO: might need to make this a listener for KeyEvents
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
+    pub clear: mpsc::UnboundedReceiver<bool>,
     pub motion_buffer: MotionBuffer, // used to parse motions
-    pub output: mpsc::UnboundedSender<Action>, // send out action when ready to use
+    pub output: mpsc::UnboundedSender<MotionBuffer>, // send out action when ready to use
 }
 
 
 impl MotionHandler {
-    pub fn new(output: mpsc::UnboundedSender<Action>) -> (Self, mpsc::UnboundedSender<char>) {
+    pub fn new(output: mpsc::UnboundedSender<MotionBuffer>) -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>) {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
+        let (clear_sender, clear_listener) = mpsc::unbounded_channel::<bool>();
         let motion_b = MotionBuffer::new();
 
         let motion = MotionHandler {
             listener,
+            clear: clear_listener,
             motion_buffer: motion_b,
             output
         };
 
-        (motion, sender)
+        (motion, sender, clear_sender)
     }
 
     pub async fn listen(&mut self) {
-        let recv = self.listener.recv().await;
+        select! {
+            recv = self.listener.recv() => {
+                if let Some(c) = recv {
+                    let c = c.clone();
+                    let x = self.motion_buffer.push(c);
 
-        if let Some(c) = recv {
-            let c = c.clone();
-            let x = self.motion_buffer.push(c);
+                    if let Some(_) = x {
+                        let new_motion = self.motion_buffer.clone();
+                        self.motion_buffer.clear();
+                        let _res = self.send(new_motion);
+                    }
+                }
+            }
 
-            if let Some(_) = x {
-                let action = Action::new(&mut self.motion_buffer);
-                let _res = self.send(action);
+            _ = self.clear.recv() => {
+                self.motion_buffer.clear()
             }
         }
     }
 
-    fn send(&mut self, a: Action) -> Option<Action> {
+    fn send(&mut self, a: MotionBuffer) -> Option<MotionBuffer> {
         let res = self.output.send(a);
         if let Ok(_) = res {
             return None;

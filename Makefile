@@ -1,5 +1,5 @@
 run:
-	cargo run README.md 8080
+	cargo run README.md 8000
 
 clean:
 	cargo clean

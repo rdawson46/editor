@@ -70,8 +70,14 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Quit => {},
         Event::Error => {},
         Event::Closed => {},
-        Event::Tick => {},
-        Event::Render => {},
+        Event::Tick => {
+            // read in inputs
+            editor.send("tick".to_string());
+        },
+        Event::Render => {
+            // render the screen
+            editor.send("render".to_string());
+        },
         Event::FocusGained => {},
         Event::FocusLost => {},
         Event::Paste(_) => {},

@@ -1,7 +1,7 @@
 use crate::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
-    motion::{Action, MotionBuffer, MotionHandler},
+    motion::{MotionBuffer, MotionHandler},
     X_OFFSET,
     // window::Window
 };
@@ -45,21 +45,20 @@ macro_rules! current_win {
 }
 */
 
-
 pub struct Editor {
     pub buffers: Vec<Buffer>,
     // pub windows: Vec<Window>,
     // pub win_ptr: usize,
     pub buf_ptr: usize,
     pub command: Command,
-    pub motion: MotionBuffer,
     pub should_quit: bool,
     pub size: (u16, u16),
     pub logger: Option<TcpStream>,
     pub message: Option<String>,
 
     pub motion_sender: UnboundedSender<char>,
-    pub action_listener: UnboundedReceiver<Action>,
+    pub clear_sender: UnboundedSender<bool>,
+    pub motion_listener: UnboundedReceiver<MotionBuffer>,
     pub motion_task: Option<JoinHandle<()>>,
 }
 
@@ -72,13 +71,12 @@ impl Editor {
         };
 
 
-        let (action_sender, action_listener) = mpsc::unbounded_channel(); 
+        let (motion_buffer_sender, motion_buffer_listener) = mpsc::unbounded_channel(); 
 
         // motion sender is for key events
-        let (mut motion, motion_sender) = MotionHandler::new(action_sender);
+        let (mut motion, motion_sender, clear_sender) = MotionHandler::new(motion_buffer_sender);
 
         let motion_task = tokio::spawn(async move {
-            // thread for motion biotch
             loop {
                 motion.listen().await;
             }
@@ -93,15 +91,15 @@ impl Editor {
                         buffers: vec![],
                         buf_ptr: 0,
                         command: Command::new(),
-                        motion: MotionBuffer::new(),
                         should_quit: false,
                         size: (0, 0),
                         logger: Some(stream),
                         message: None,
 
-                        action_listener,
+                        motion_listener: motion_buffer_listener,
                         motion_task: Some(motion_task),
                         motion_sender,
+                        clear_sender,
                     });
                 } 
             }
@@ -111,15 +109,15 @@ impl Editor {
             buffers: vec![],
             buf_ptr: 0,
             command: Command::new(),
-            motion: MotionBuffer::new(),
             should_quit: false,
             size: (0, 0),
             logger: None,
             message: None,
 
-            action_listener,
+            motion_listener: motion_buffer_listener,
             motion_task: Some(motion_task),
             motion_sender,
+            clear_sender,
         });
     }
 
@@ -145,6 +143,7 @@ impl Editor {
                 // TODO: temp idea for displaying motions
                 let mut motion_str = "".to_string();
 
+                /*
                 match &self.motion.number {
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
@@ -154,6 +153,7 @@ impl Editor {
                     Some(value) => motion_str.push_str(value.clone().as_str()),
                     None => {}
                 }
+                */
                 
                 let status = match &mut self.message {
                     Some(value) => value.to_owned(),
@@ -210,8 +210,9 @@ impl Editor {
                     },
                     KeyCode::Char(value) => {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.motion.clear();
+                            let _ = self.clear_sender.send(true);
                         } else {
+                            /*
                             let res = self.motion.push(value);
 
                             match res {
@@ -219,10 +220,12 @@ impl Editor {
                                     // maybe will use, maybe not, whos to say
                                     //let _ = self.direc_parse();
                                     let _ = self.parse();
-                                    self.motion.clear();
+                                    self.clear_sender.send(true);
                                 },
                                 None => {}
                             }
+                            */
+                            let _ = self.motion_sender.send(value);
                         }
                     },
                     _ => {}
@@ -244,9 +247,9 @@ impl Editor {
                             let update = self.save();
                             self.set_message(Some(update.clone()));
                         } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
-                            self.motion.clear();
+                            let _ = self.clear_sender.send(true);
                         } else {
-
+                            /*
                             let res = self.motion.push(value);
 
                             match res {
@@ -256,6 +259,9 @@ impl Editor {
                                 },
                                 None => {}
                             }
+                            */
+
+                            let _ = self.motion_sender.send(value);
                         }
                     },
                     _ => {}
@@ -343,24 +349,24 @@ impl Editor {
             //  could possile use channels for this
         //  might need an action function
         //  will probably remove returned result
-    pub fn parse(&mut self) -> Result<u32, &str> {
-        let count = match &self.motion.number{
+    pub fn parse(&mut self, motion_buffer: MotionBuffer) -> Result<u32, &str> {
+        let count = match motion_buffer.number{
             Some(value) => value.parse::<u32>().unwrap_or(0),
             None => 1,
         };
 
-        let motion = match &self.motion.motion {
+        let motion = match motion_buffer.motion {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
 
         // TODO: figure out how have these commands run
-        let action = match &self.motion.action {
+        let action = match motion_buffer.action {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
 
-        let action_args = match &self.motion.action_arg {
+        let action_args = match motion_buffer.action_arg {
             Some(value) => value.clone(),
             None => "".to_string(),
         };
@@ -388,13 +394,6 @@ impl Editor {
 
         Ok(0)
     }
-
-    // FIX: might not be great
-    /*
-    pub fn direc_parse(&mut self) -> Result<u32, &str> {
-        Ok(0)
-    }
-    */
 
     pub fn handle_command(&mut self, command: Option<CommandKey>){
         match command {
@@ -614,12 +613,12 @@ impl Editor {
         };
     }
 
-    pub async fn next_action(&mut self) -> Result<Action> {
-        let event = self.action_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
+    pub async fn next_motion(&mut self) -> Result<MotionBuffer> {
+        let event = self.motion_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
         event
     }
 
-    pub fn handle_action(&mut self, action: Result<Action>) {
+    pub fn handle_motion(&mut self, motion_buffer: Result<MotionBuffer>) {
         /*
         match action.as_str() {
             ":" => self.change_mode(Mode::Command),

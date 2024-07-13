@@ -32,7 +32,7 @@ static X_OFFSET: usize = 5;
         - editor
         - buffer
         - status line
-    - figure out to get text from motionbuffer in MotionHandler
+    - figure out to get text from motionbuffer in MotionHandler 
 
   After:
     - change tui channels and connect reciever to editor ✅
@@ -55,7 +55,7 @@ static X_OFFSET: usize = 5;
         - tui.rs
         - editor.rs?
 
-   ⭐ don't render ui on updates but by frame rate, maybe
+   ⭐ don't render ui on updates but by frame rate, maybe ✅
 ==================== */
 
 
@@ -72,23 +72,41 @@ async fn run() -> Result<()> {
     tui.start();
 
     loop {
-        tui.terminal.draw(|f| {
-            editor.set_cursor(f);
-            ui(f, &mut editor);
-            // color(f)???  // might be helpful with highlighting
-        })?;
-        
         select! {
             event = tui.next() => {
                 match event {
-                    Ok(event) => update(&mut editor, event, &mut tui),
-                    Err(_) => {}
+                    Ok(event) => {
+                        match event {
+                            Event::Render => {
+                                tui.terminal.draw(|f| {
+                                    editor.set_cursor(f);
+                                    ui(f, &mut editor);
+                                    // color(f)???  // might be helpful with highlighting
+                                })?;
+                            },
+                            _ => update(&mut editor, event, &mut tui),
+                        }
+                    },
+                    Err(err) => {
+                        editor.send("Hit crossterm error".to_string());
+                        editor.send(err.to_string());
+
+                        editor.should_quit = true;
+                    }
                 }
             },
 
-            action = editor.next_action() => {
-                editor.send("motion reciever".to_string());
-                editor.handle_action(action);
+            motion_buffer = editor.next_motion() => {
+                match motion_buffer {
+                    Ok(motion_buffer) => {
+                        let _ = editor.parse(motion_buffer);
+                    },
+                    Err(err) => {
+                        editor.send("motion error recv".to_string());
+                        editor.send(err.to_string());
+                        editor.should_quit = true;
+                    }
+                }
             }
         }
 
