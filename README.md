@@ -8,11 +8,12 @@ Make an editor that:
 * customizable
 
 ## Test
-* Restablish Motions, KeyEvents, and event loop
 * overflow on word jumps, screen moving
     * moving screen with jumps
+* Restablish Motions, KeyEvents, and event loop
 * windows from multi buffer view
     * simply start with two per window
+* adding deletion actions
 * terminal integration?
     * undecided on this one
 * baby git integration

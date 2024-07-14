@@ -140,8 +140,7 @@ impl Editor {
                 (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
             },
             Mode::Normal => {
-                // TODO: temp idea for displaying motions
-                let mut motion_str = "".to_string();
+                let motion_str = "".to_string();
 
                 /*
                 match &self.motion.number {
@@ -349,16 +348,6 @@ impl Editor {
         for _ in 0..count {
             // perform action then move cursor
             self.motion_func(&motion);
-
-            match &current_buf!(self).mode {
-                Mode::Normal => {},
-                _ => break,
-            }
-        }
-
-
-        for _ in 0..count {
-            // perform action then move cursor
             self.action_func(&action, &action_args);
 
             match &current_buf!(self).mode {
@@ -599,5 +588,26 @@ impl <'a> Editor {
     // move to buffer to handle more logic
     pub fn buffer_display(&self) -> (Paragraph<'a>, Paragraph<'a>) {
         current_buf!(self).ui()
+    }
+}
+
+impl Drop for Editor {
+    fn drop(&mut self) {
+        drop(self.clear_sender.to_owned());
+        drop(self.motion_sender.to_owned());
+        match std::mem::replace(&mut self.logger, None) {
+            Some(stream) => {
+                drop(stream);
+            },
+            None => {},
+        }
+
+
+        match std::mem::replace(&mut self.motion_task, None) {
+            Some(handle) => {
+                handle.abort();
+            },
+            None => {},
+        }
     }
 }
