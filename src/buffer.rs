@@ -41,7 +41,7 @@ enum FileType {
     Rust
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Mode{
     Insert, 
     Command,
@@ -60,7 +60,7 @@ impl Cursor{
 }
 
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Debug)]
 pub enum BufferType {
     Empty,
     Directory,

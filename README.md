@@ -10,6 +10,7 @@ Make an editor that:
 ## Test
 * overflow on word jumps, screen moving
     * moving screen with jumps
+* testing
 * Restablish Motions, KeyEvents, and event loop
 * windows from multi buffer view
     * simply start with two per window
