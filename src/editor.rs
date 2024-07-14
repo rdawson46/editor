@@ -212,19 +212,6 @@ impl Editor {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             let _ = self.clear_sender.send(true);
                         } else {
-                            /*
-                            let res = self.motion.push(value);
-
-                            match res {
-                                Some(_) => {
-                                    // maybe will use, maybe not, whos to say
-                                    //let _ = self.direc_parse();
-                                    let _ = self.parse();
-                                    self.clear_sender.send(true);
-                                },
-                                None => {}
-                            }
-                            */
                             let _ = self.motion_sender.send(value);
                         }
                     },
@@ -249,18 +236,6 @@ impl Editor {
                         } else if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             let _ = self.clear_sender.send(true);
                         } else {
-                            /*
-                            let res = self.motion.push(value);
-
-                            match res {
-                                Some(_) => {
-                                    let _ = self.parse();
-                                    self.motion.clear();
-                                },
-                                None => {}
-                            }
-                            */
-
                             let _ = self.motion_sender.send(value);
                         }
                     },
@@ -616,43 +591,6 @@ impl Editor {
     pub async fn next_motion(&mut self) -> Result<MotionBuffer> {
         let event = self.motion_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
         event
-    }
-
-    pub fn handle_motion(&mut self, motion_buffer: Result<MotionBuffer>) {
-        /*
-        match action.as_str() {
-            ":" => self.change_mode(Mode::Command),
-            "j" => current_buf!(self).move_down(self.size),
-            "k" => current_buf!(self).move_up(),
-            "h" => current_buf!(self).move_left(),
-            "l" => current_buf!(self).move_right(),
-            "i" => self.change_mode(Mode::Insert),
-            "a" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_right();
-            },
-            "O" => {
-                current_buf!(self).new_line_above(self.size);
-            },
-            "o" => {
-                current_buf!(self).new_line_below(self.size);
-            },
-            "w" => current_buf!(self).move_next_word(self.size),
-            "b" => current_buf!(self).move_back_word(self.size),
-            "e" => current_buf!(self).move_end_word(self.size),
-            "0" => current_buf!(self).move_begin_of_line(),
-            "$" => current_buf!(self).move_end_of_line(),
-            "I" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_begin_of_line();
-            },
-            "A" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_end_of_line();
-            },
-            _ => {}
-        }
-        */
     }
 }
 

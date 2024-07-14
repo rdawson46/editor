@@ -37,12 +37,6 @@ static X_OFFSET: usize = 5;
   After:
     - change tui channels and connect reciever to editor ✅
     - make channel between motion and editor, and then in reverse ✅
-    
-  Goal in main:
-    select! {
-        event = channel from tui { handle event }, ✅
-        motion/action = channel from motion { handle funcs to modify buffer }, ✅
-    }
 
     handle ui {
         draw()

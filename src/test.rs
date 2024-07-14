@@ -1,8 +1,12 @@
 // creates error now that it considers tui size
 #[test]
-fn test_editor(){
+fn test_editor(){}
 
-}
+#[test]
+fn test_buffer() {}
+
+#[test]
+fn test_motion() {}
 
 #[test]
 fn test_start_and_close() {

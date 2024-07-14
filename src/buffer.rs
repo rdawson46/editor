@@ -137,7 +137,6 @@ impl Buffer {
                     if line_len == 0 {
                         self.cursor.current.0 = 0;
                     } else {
-                        //let x = std::cmp::min(self.cursor.current.0, line_len - 1);
                         let x = std::cmp::min(self.cursor.current.0, line_len - 1);
                         self.cursor.current.0 = x;
                         self.cursor.possible.0 = x;
