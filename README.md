@@ -1,17 +1,8 @@
 # Editor
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
-# Goal
-Make an editor that:
-* is a usable simple text editor
-* configurable
-* customizable
-
-## Test
-* overflow on word jumps, screen moving
-    * moving screen with jumps
-* testing
-* Restablish Motions, KeyEvents, and event loop
+## To Do
+* add highlighting/visual mode
 * windows from multi buffer view
     * simply start with two per window
 * adding deletion actions
@@ -23,7 +14,6 @@ Make an editor that:
     * improve syntax highlighting with tree-sitter
         * improve performance
         * add basic color schemes
-* define runtime better for action (motions, commands, etc) handling
 * arrow key movement for buffer and command line
 * improve/fix testing suite
 * fix all todos and fixes in proj
@@ -33,6 +23,5 @@ Make an editor that:
     * refactor functions and system
 * add f/F/t/T
 * mouse integration
-* highlighting mode
 * copy/paste
 * ~improve commands ui

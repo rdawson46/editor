@@ -173,7 +173,8 @@ impl Editor {
             },
             Mode::Command => {
                 (Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP)), None)
-            }
+            },
+            Mode::Visual(_) => todo!("impl visual mode for ui"),
         }
     }
 

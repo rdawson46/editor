@@ -46,6 +46,7 @@ pub enum Mode{
     Insert, 
     Command,
     Normal,
+    Visual((u16, u16)),
 }
 
 pub struct Cursor{
@@ -145,8 +146,10 @@ impl Buffer {
                     execute!(std::io::stderr(), cursor::SetCursorStyle::SteadyBlock).unwrap();
                     self.mode = mode;
                 }
-                
             },
+            Mode::Visual(_) => {
+                self.mode = mode;
+            }
         }
     }
 
@@ -284,9 +287,10 @@ impl Buffer {
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
                 },
+                Mode::Visual(_) => {},
                 Mode::Command => {
                     todo!()
-                }
+                },
             }
         }
     }
@@ -316,6 +320,7 @@ impl Buffer {
                     self.cursor.current.0 = line_len;
                     self.cursor.possible.0 = line_len;
                 },
+                Mode::Visual(_) => {}
                 Mode::Command => {}
             }
         }
@@ -341,8 +346,12 @@ impl Buffer {
 
             if let Some(idx) = res {
                 // cursor movement
+                if idx > str.len() {
+                    return
+                }
+
                 let line_num = self.lines.rope.try_byte_to_line(idx);
-                self.cursor.current.1 = line_num.unwrap_or(0);
+                self.cursor.current.1 = line_num.unwrap_or(self.cursor.current.1);
 
                 let line_idx = self.lines.rope.try_line_to_byte(self.ptr_y + self.cursor.current.1).unwrap_or(0);
                 let line_pos = idx.checked_sub(line_idx).unwrap_or(line_idx);

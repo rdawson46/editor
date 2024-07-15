@@ -26,30 +26,12 @@ static X_OFFSET: usize = 5;
 /* ====================
  Map to improve event loop: 
   Prep:
-    - change cursor interface ✅
-    - clear command line on ctrl+c ✅
     - establish a widget for:
         - editor
         - buffer
         - status line
     - figure out to get text from motionbuffer in MotionHandler 
 
-  After:
-    - change tui channels and connect reciever to editor ✅
-    - make channel between motion and editor, and then in reverse ✅
-
-    handle ui {
-        draw()
-        color() // color cells for syntax highlighting
-    }
-
-  Finally:
-    - remove commented out code
-        - main.rs
-        - tui.rs
-        - editor.rs?
-
-   ⭐ don't render ui on updates but by frame rate, maybe ✅
 ==================== */
 
 
@@ -57,7 +39,7 @@ async fn run() -> Result<()> {
     let filename = std::env::args().nth(1);
     let filename = filename.unwrap_or(String::from("."));
 
-    let mut tui = Tui::new()?.tick_rate(1.0);
+    let mut tui = Tui::new()?.tick_rate(1.0).render_rate(30.0);
 
     let mut editor = Editor::new()?;
     editor.new_buffer(&filename);

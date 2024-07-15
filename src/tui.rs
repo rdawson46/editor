@@ -54,8 +54,8 @@ pub struct Tui {
     pub task: Option<JoinHandle<()>>,
     pub event_rx: mpsc::UnboundedReceiver<Event>,
     pub event_tx: mpsc::UnboundedSender<Event>,
-    pub update: bool,
     pub tick_rate: f64,
+    pub render_rate: f64,
 }
 
 impl Tui {
@@ -68,6 +68,7 @@ impl Tui {
         let (tx, rx) = unbounded_channel::<Event>();
 
         let tick_rate: f64 = 0.0;
+        let render_rate: f64 = 0.0;
 
         let task: Option<JoinHandle<()>> = None;
 
@@ -77,8 +78,8 @@ impl Tui {
             task,
             event_rx: rx,
             event_tx: tx,
-            update: true,
-            tick_rate
+            tick_rate,
+            render_rate
         })
     }
 
@@ -89,7 +90,7 @@ impl Tui {
         let tick_rate = std::time::Duration::from_secs_f64(1.0 / self.tick_rate);
 
         // time to render screen
-        let render_rate = std::time::Duration::from_secs_f64(1.0 / 30.0);
+        let render_rate = std::time::Duration::from_secs_f64(1.0 / self.render_rate);
         let _event_tx = self.event_tx.clone();
 
         let task = tokio::spawn(async move {
@@ -138,17 +139,6 @@ impl Tui {
 
     pub async fn next(&mut self) -> Result<Event> {
         let event = self.event_rx.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get event"));
-        match &event {
-            Ok(ev) => {
-                if let Event::Key(_) = ev {
-                    self.update = true;
-                }
-                if let Event::Resize(_, _) = ev {
-                    self.update = true;
-                }
-            },
-            Err(_) => {}
-        }
         event
     }
 
@@ -166,6 +156,11 @@ impl Tui {
 
     pub fn tick_rate(mut self, val: f64) -> Self{
         self.tick_rate = val;
+        self
+    }
+
+    pub fn render_rate(mut self, val: f64) -> Self{
+        self.render_rate = val;
         self
     }
 }

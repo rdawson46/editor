@@ -70,14 +70,7 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Quit => {},
         Event::Error => {},
         Event::Closed => {},
-        Event::Tick => {
-            // read in inputs
-            editor.send("tick".to_string());
-        },
-        Event::Render => {
-            // render the screen
-            editor.send("render".to_string());
-        },
+        Event::Tick => {},
         Event::FocusGained => {},
         Event::FocusLost => {},
         Event::Paste(_) => {},
@@ -88,5 +81,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Resize(x, y) => {
             tui.size = (x, y);
         },
+        _ => {}
     }
 }
