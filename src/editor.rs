@@ -143,38 +143,38 @@ impl Editor {
                 let motion_str = "".to_string();
 
                 /*
-                match &self.motion.number {
-                    Some(value) => motion_str.push_str(value.clone().as_str()),
-                    None => {}
-                }
+                   match &self.motion.number {
+                   Some(value) => motion_str.push_str(value.clone().as_str()),
+                   None => {}
+                   }
 
-                match &self.motion.action {
-                    Some(value) => motion_str.push_str(value.clone().as_str()),
-                    None => {}
-                }
-                */
-                
+                   match &self.motion.action {
+                   Some(value) => motion_str.push_str(value.clone().as_str()),
+                   None => {}
+                   }
+                   */
+
                 let status = match &mut self.message {
                     Some(value) => value.to_owned(),
                     None => "-- Normal --".to_string(),
                 };
 
                 let status = Paragraph::new(format!("{}", status))
-                        .block(Block::default()
-                            .borders(Borders::TOP)
-                            .border_style(Style::new().blue()));
+                    .block(Block::default()
+                        .borders(Borders::TOP)
+                        .border_style(Style::new().blue()));
 
                 let motion = Paragraph::new(format!("{}", motion_str))
                     .block(Block::default()
-                           .borders(Borders::TOP)
-                           .border_style(Style::new().blue()))
+                        .borders(Borders::TOP)
+                        .border_style(Style::new().blue()))
                     .alignment(Alignment::Center);
                 (status, Some(motion))
             },
             Mode::Command => {
                 (Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP)), None)
             },
-            Mode::Visual(_) => todo!("impl visual mode for ui"),
+            Mode::Visual{..} => todo!("impl visual mode for ui"),
         }
     }
 
@@ -241,7 +241,8 @@ impl Editor {
                     },
                     _ => {}
                 }
-            }
+            },
+            Mode::Visual{..} => todo!("work on visual mode for file key press")
         }
     }
 
@@ -273,7 +274,7 @@ impl Editor {
             _ => {}
         }
     }
-    
+
     // NOTE: not specifically for inserting a key, but key handling in insert mode
     //
     // TODO: figure out what this is for
@@ -286,6 +287,10 @@ impl Editor {
                 current_buf!(self).insert_key_file(key, self.size);
             }
         }
+    }
+
+    pub fn paste(&mut self, text: String) {
+        let _ = &current_buf!(self).paste(text);
     }
 
     // NOTE: word movements
@@ -320,10 +325,10 @@ impl Editor {
 
 
     // NOTE: motion parsing function
-        // might have to be async for timming
-            //  could possile use channels for this
-        //  might need an action function
-        //  will probably remove returned result
+    // might have to be async for timming
+    //  could possile use channels for this
+    //  might need an action function
+    //  will probably remove returned result
     pub fn parse(&mut self, motion_buffer: MotionBuffer) -> Result<u32, &str> {
         let count = match motion_buffer.number{
             Some(value) => value.parse::<u32>().unwrap_or(0),
@@ -389,7 +394,6 @@ impl Editor {
                         self.set_message(Some(output))
                     },
                     CommandKey::Send(message) => {
-                        // TODO: make function for sending
                         self.send(message);
                     },
                     CommandKey::NextBuf => {
@@ -423,6 +427,10 @@ impl Editor {
             "h" => current_buf!(self).move_left(),
             "l" => current_buf!(self).move_right(),
             "i" => self.change_mode(Mode::Insert),
+            "v" => {
+                // TODO: grab current x and y coord, do I even need x and y or can i use byte
+                self.change_mode(Mode::Visual{start: 0, end: 0})
+            }
             "a" => {
                 current_buf!(self).change_mode(Mode::Insert);
                 current_buf!(self).move_right();
@@ -489,7 +497,7 @@ impl Editor {
         }
 
         self.buffers.remove(self.buf_ptr);
-        
+
         if self.buf_ptr > 0 {
             self.buf_ptr -= 1;
         }
@@ -538,15 +546,13 @@ impl Editor {
 
     // NOTE: functions for logging
 
-    pub fn send(&mut self, message: String){
-        let _ = {
-            match &mut self.logger {
-                Some(stream) => {
-                    let _ = stream.write(message.as_bytes());
-                },
-                None => {}
-            }
-        };
+    pub fn send(&mut self, message: String) {
+        match &mut self.logger {
+            Some(stream) => {
+                let _ = stream.write(message.as_bytes());
+            },
+            None => {}
+        }
     }
 
     // NOTE: window management

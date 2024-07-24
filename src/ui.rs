@@ -73,7 +73,9 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
         Event::Tick => {},
         Event::FocusGained => {},
         Event::FocusLost => {},
-        Event::Paste(_) => {},
+        Event::Paste(text) => {
+            editor.paste(text)
+        },
         Event::Key(key) => {
             editor.key_press(key);
         },

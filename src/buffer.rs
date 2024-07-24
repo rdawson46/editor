@@ -46,7 +46,7 @@ pub enum Mode{
     Insert, 
     Command,
     Normal,
-    Visual((u16, u16)),
+    Visual{ start: u16, end: u16 },
 }
 
 pub struct Cursor{
@@ -113,7 +113,7 @@ impl Buffer {
 
     // NOTE: mode change functions
 
-    pub fn change_mode(&mut self, mode: Mode) {
+    pub fn change_mode(&mut self, mut mode: Mode) {
         match mode {
             Mode::Insert => {
                 match &self.buffer_type {
@@ -147,7 +147,9 @@ impl Buffer {
                     self.mode = mode;
                 }
             },
-            Mode::Visual(_) => {
+            Mode::Visual{ref mut start, ref mut end} => {
+                *start = 0;
+                *end = 0;
                 self.mode = mode;
             }
         }
@@ -215,6 +217,19 @@ impl Buffer {
             },
             _ => {}
         }
+    }
+
+    pub fn paste(&mut self, text: String) {
+        let m = self.mode;
+
+        self.change_mode(Mode::Insert);
+        let char_idx = self.cursor.current.0 + self.lines.rope.line_to_byte(self.cursor.current.1);
+
+        if let Err(_) = self.lines.rope.try_insert(char_idx, &text) {
+            println!("error when pasting {text} at {char_idx}");
+        }
+
+        self.change_mode(m)
     }
 
     pub fn move_down(&mut self, size: (u16, u16)) {
@@ -287,7 +302,7 @@ impl Buffer {
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
                 },
-                Mode::Visual(_) => {},
+                Mode::Visual{..} => {},
                 Mode::Command => {
                     todo!()
                 },
@@ -320,7 +335,7 @@ impl Buffer {
                     self.cursor.current.0 = line_len;
                     self.cursor.possible.0 = line_len;
                 },
-                Mode::Visual(_) => {}
+                Mode::Visual{..} => {}
                 Mode::Command => {}
             }
         }

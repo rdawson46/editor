@@ -2,6 +2,7 @@
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
 ## To Do
+* issue with empty file
 * add highlighting/visual mode
 * windows from multi buffer view
     * simply start with two per window
