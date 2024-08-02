@@ -5,7 +5,7 @@ use crate::{
     X_OFFSET,
     // window::Window
 };
-use crossterm::event::{KeyEvent, KeyCode, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
 use color_eyre::eyre::Result;
 use std::{
     io::Write,
@@ -552,6 +552,24 @@ impl Editor {
                 let _ = stream.write(message.as_bytes());
             },
             None => {}
+        }
+    }
+
+    // NOTE: mouse functions
+    pub fn handle_mouse(&mut self, mouse_event: MouseEvent) {
+        match &mouse_event.kind {
+            MouseEventKind::Up(m_button) => {
+                match m_button {
+                    MouseButton::Left => {},
+                    MouseButton::Right => {},
+                    MouseButton::Middle => {},
+                }
+            },
+            MouseEventKind::Down(_) => {},
+            MouseEventKind::Drag(_) => {},
+            MouseEventKind::Moved => {},
+            MouseEventKind::ScrollDown => {},
+            MouseEventKind::ScrollUp => {},
         }
     }
 

@@ -66,20 +66,33 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
 
 pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
     match event {
-        Event::Init => {},
-        Event::Quit => {},
-        Event::Error => {},
+        Event::Init => {
+            editor.send("application initialized".to_string());
+        },
+        Event::Quit => {
+            editor.send("application quiting".to_string());
+        },
+        Event::Error => {
+            editor.send("error encountered".to_string());
+        },
         Event::Closed => {},
         Event::Tick => {},
-        Event::FocusGained => {},
-        Event::FocusLost => {},
+        Event::FocusGained => {
+            editor.send("focus gained".to_string());
+        },
+        Event::FocusLost => {
+            editor.send("focus lost".to_string());
+        },
         Event::Paste(text) => {
             editor.paste(text)
         },
         Event::Key(key) => {
             editor.key_press(key);
         },
-        Event::Mouse(_) => {},
+        Event::Mouse(mouse_event) => {
+            editor.send("mouse event found".to_string());
+            editor.handle_mouse(mouse_event);
+        },
         Event::Resize(x, y) => {
             tui.size = (x, y);
         },
