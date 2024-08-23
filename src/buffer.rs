@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
 use std::env;
 use std::fs::{
     File,
@@ -36,10 +36,12 @@ use ropey::Rope;
 
 */
 
+/*
 #[warn(dead_code)]
 enum FileType {
     Rust
 }
+*/
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Mode{
@@ -558,6 +560,19 @@ impl Buffer {
         self.size = new_size;
     }
 
+    pub fn mouse_handler(&mut self, click: &MouseEvent) {
+        match &click.kind {
+            MouseEventKind::Down(_) => {
+
+            },
+            MouseEventKind::Up(_) => {},
+            MouseEventKind::Drag(_) => {},
+            MouseEventKind::Moved => {},
+            MouseEventKind::ScrollDown => {},
+            MouseEventKind::ScrollUp => {},
+        }
+    }
+    
     // if returns some then I can use tree sitter
     // will be needed for rendering
     /*

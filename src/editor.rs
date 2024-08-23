@@ -557,20 +557,7 @@ impl Editor {
 
     // NOTE: mouse functions
     pub fn handle_mouse(&mut self, mouse_event: MouseEvent) {
-        match &mouse_event.kind {
-            MouseEventKind::Up(m_button) => {
-                match m_button {
-                    MouseButton::Left => {},
-                    MouseButton::Right => {},
-                    MouseButton::Middle => {},
-                }
-            },
-            MouseEventKind::Down(_) => {},
-            MouseEventKind::Drag(_) => {},
-            MouseEventKind::Moved => {},
-            MouseEventKind::ScrollDown => {},
-            MouseEventKind::ScrollUp => {},
-        }
+        current_buf!(self).mouse_handler(&mouse_event);
     }
 
     // NOTE: window management
