@@ -565,7 +565,7 @@ impl Buffer {
 
     // TODO: move to corresponding location
     pub fn set_cursor(&mut self, x: usize, y: usize) {
-        // set minimum
+        // FIX: set minimum, double check y value
         self.cursor.current.1 = y;
         self.cursor.possible.1 = y;
         let x = min(x, self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1);
@@ -584,12 +584,11 @@ impl Buffer {
                     MouseButton::Left => {
 
                         if self.mode != Mode::Command {
-                            /*
-                             * BUG:
-                             * gets click values from the entire grid, including non text location
-                             */
-                            let x = click.row as usize + X_OFFSET;
-                            let y = click.column as usize;
+                            let mut x = click.column as usize;
+                            x = if x <= X_OFFSET { 0 } else { click.column as usize - X_OFFSET };
+
+                            // let y = max(click.column as usize + X_OFFSET, X_OFFSET);
+                            let y = click.row as usize;
 
                             self.set_cursor(x, y);
                         }
