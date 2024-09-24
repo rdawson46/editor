@@ -1,17 +1,17 @@
 use std::io;
 
 use crossterm::event::{
-//    EnableMouseCapture,
-//    DisableMouseCapture,
 //    KeyCode,
 //    self,
 //    KeyEventKind,
+    EnableMouseCapture,
+    DisableMouseCapture,
     KeyEvent,
     MouseEvent
 };
 use color_eyre::eyre::Result;
 use ratatui::Terminal;
-use crossterm::execute;
+use crossterm::{execute, ExecutableCommand};
 use futures::{
     FutureExt,
     StreamExt
@@ -116,6 +116,9 @@ impl Tui {
                                     crossterm::event::Event::Resize(x,y) => {
                                         _event_tx.send(Event::Resize(x, y)).unwrap();
                                     },
+                                    crossterm::event::Event::Mouse(mouse_event) => {
+                                        _event_tx.send(Event::Mouse(mouse_event)).unwrap();
+                                    },
                                     _ => {}
                                 }
                             }
@@ -145,10 +148,12 @@ impl Tui {
     pub fn enter(&self) -> Result<()> {
         enable_raw_mode()?;
         execute!(std::io::stderr(), EnterAlternateScreen)?;
+        std::io::stderr().execute(EnableMouseCapture)?;
         Ok(())
     }
 
     pub fn exit(&self) -> Result<()> {
+        std::io::stderr().execute(DisableMouseCapture)?;
         execute!(std::io::stderr(), LeaveAlternateScreen)?;
         disable_raw_mode()?;
         Ok(())

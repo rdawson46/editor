@@ -90,7 +90,6 @@ pub fn update(editor: &mut Editor, event: Event, tui: &mut Tui){
             editor.key_press(key);
         },
         Event::Mouse(mouse_event) => {
-            editor.send("mouse event found".to_string());
             editor.handle_mouse(mouse_event);
         },
         Event::Resize(x, y) => {

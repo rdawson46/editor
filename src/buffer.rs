@@ -1,6 +1,7 @@
+use std::cmp::{min, max};
 use std::path::{Path, PathBuf};
 use color_eyre::eyre::Result;
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
 use std::env;
 use std::fs::{
     File,
@@ -26,6 +27,7 @@ use crate::word::{
     find_word_start_backward
 };
 use ropey::Rope;
+use crate::X_OFFSET;
 
 /*
 
@@ -140,7 +142,7 @@ impl Buffer {
                     if line_len == 0 {
                         self.cursor.current.0 = 0;
                     } else {
-                        let x = std::cmp::min(self.cursor.current.0, line_len - 1);
+                        let x = min(self.cursor.current.0, line_len - 1);
                         self.cursor.current.0 = x;
                         self.cursor.possible.0 = x;
                     };
@@ -245,8 +247,8 @@ impl Buffer {
         } else {
             // max lines in file
             let line_nums = self.lines.rope.len_lines() - 2;
-            let cap = std::cmp::min(line_nums, usize::from(size.1 - 1) + self.ptr_y);
-            let y = std::cmp::min(y, cap.try_into().unwrap());
+            let cap = min(line_nums, usize::from(size.1 - 1) + self.ptr_y);
+            let y = min(y, cap.try_into().unwrap());
             self.cursor.current.1 = y;
         }
 
@@ -256,8 +258,8 @@ impl Buffer {
         if line_len == 0 {
             self.cursor.current.0 = 0;
         } else {
-            let x = std::cmp::max(self.cursor.current.0, self.cursor.possible.0);
-            let x = std::cmp::min(x, line_len - 1);
+            let x = max(self.cursor.current.0, self.cursor.possible.0);
+            let x = min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
 
@@ -277,8 +279,8 @@ impl Buffer {
         if line_len == 0 {
             self.cursor.current.0 = 0;
         } else {
-            let x = std::cmp::max(self.cursor.current.0, self.cursor.possible.0);
-            let x = std::cmp::min(x, line_len - 1);
+            let x = max(self.cursor.current.0, self.cursor.possible.0);
+            let x = min(x, line_len - 1);
             self.cursor.current.0 = x;
         }
     }
@@ -292,14 +294,14 @@ impl Buffer {
             match &self.mode {
                 Mode::Normal => {
                     let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-                    let x = std::cmp::min(x, line_len - 1);
+                    let x = min(x, line_len - 1);
 
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
                 },
                 Mode::Insert => {
                     let x = self.cursor.current.0.checked_add(1).unwrap_or(self.cursor.current.0);
-                    let x = std::cmp::min(x, line_len);
+                    let x = min(x, line_len);
 
                     self.cursor.current.0 = x;
                     self.cursor.possible.0 = x;
@@ -560,14 +562,45 @@ impl Buffer {
         self.size = new_size;
     }
 
+
+    // TODO: move to corresponding location
+    pub fn set_cursor(&mut self, x: usize, y: usize) {
+        // set minimum
+        self.cursor.current.1 = y;
+        self.cursor.possible.1 = y;
+        let x = min(x, self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1);
+        self.cursor.current.0 = x;
+        self.cursor.possible.0 = x;
+    }
+
     pub fn mouse_handler(&mut self, click: &MouseEvent) {
         match &click.kind {
-            MouseEventKind::Down(_) => {
+            MouseEventKind::Down(_) => {},
+            MouseEventKind::Up(button) => {
+                // move cursor to closest point
+                match &button {
+                    MouseButton::Middle => {},
+                    MouseButton::Right => {},
+                    MouseButton::Left => {
 
+                        if self.mode != Mode::Command {
+                            /*
+                             * BUG:
+                             * gets click values from the entire grid, including non text location
+                             */
+                            let x = click.row as usize + X_OFFSET;
+                            let y = click.column as usize;
+
+                            self.set_cursor(x, y);
+                        }
+                    },
+                }
             },
-            MouseEventKind::Up(_) => {},
-            MouseEventKind::Drag(_) => {},
+            MouseEventKind::Drag(_) => {
+                // highlight, requires visual mode
+            },
             MouseEventKind::Moved => {},
+            // obvious
             MouseEventKind::ScrollDown => {},
             MouseEventKind::ScrollUp => {},
         }
