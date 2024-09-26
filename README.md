@@ -8,9 +8,6 @@ Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 * windows from multi buffer view
     * simply start with two per window
 * adding deletion actions
-* terminal integration?
-    * undecided on this one
-* baby git integration
 * improve error handling
 * improve tree sitter working
     * improve syntax highlighting with tree-sitter
@@ -25,5 +22,9 @@ Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
     * refactor functions and system
 * add f/F/t/T
 * mouse integration
+    * more than just click
 * copy/paste
 * ~improve commands ui
+* baby git integration
+* terminal integration?
+    * undecided on this one

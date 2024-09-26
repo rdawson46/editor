@@ -1,5 +1,10 @@
 use tokio::{sync::mpsc, select};
 
+/* IDEA:
+ * make the motion buffer a state machine
+ *
+ */
+
 // TODO: figure how to do leader
 pub struct MotionBuffer {
     pub action: Option<String>,
