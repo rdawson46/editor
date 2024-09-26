@@ -2,6 +2,7 @@
 Trying to make a 'mini' vim like editor in rust. Currently a work in progress.
 
 ## To Do
+* enable safe shutdown
 * issue with empty file
 * add highlighting/visual mode
 * windows from multi buffer view

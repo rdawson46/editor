@@ -557,7 +557,6 @@ impl Editor {
 
     // NOTE: mouse functions
     pub fn handle_mouse(&mut self, mouse_event: MouseEvent) {
-        self.send(format!("mouse event: {:?}", mouse_event));
         current_buf!(self).mouse_handler(&mouse_event);
     }
 

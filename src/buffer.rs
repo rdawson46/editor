@@ -566,9 +566,18 @@ impl Buffer {
     // TODO: move to corresponding location
     pub fn set_cursor(&mut self, x: usize, y: usize) {
         // FIX: set minimum, double check y value
+        
+        let y = min(y,
+                    self.lines.rope.len_lines()
+                        .checked_sub(2)
+                            .unwrap_or(0)
+                        .checked_sub(self.ptr_y)
+                            .unwrap_or(0)
+                );
         self.cursor.current.1 = y;
         self.cursor.possible.1 = y;
-        let x = min(x, self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars() - 1);
+
+        let x = min(x, self.lines.rope.get_line(self.cursor.current.1 + self.ptr_y).unwrap().len_chars().checked_sub(1).unwrap_or(0)); // unchecked sub
         self.cursor.current.0 = x;
         self.cursor.possible.0 = x;
     }
