@@ -5,6 +5,71 @@ use tokio::{sync::mpsc, select};
  *
  */
 
+#[derive(Default, Clone, Copy)]
+enum Stages {
+    #[default] Start,
+    Leader,
+    NeedsParam,
+    End,
+}
+
+struct StateMachine {
+    stage: Stages,
+    input: String,
+}
+
+impl StateMachine {
+    fn new() -> Self {
+        StateMachine{
+            stage: Stages::default(),
+            input: String::new(),
+        }
+    }
+
+    // need to establish s
+    fn recv(&mut self, c: char) -> Stages {
+        let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
+        let needs_param = ['d', 'f'];
+        let leader = ' ';
+
+        match &self.stage {
+            Stages::Start => {
+                if c.is_digit(10) {
+                    self.input.push(c);
+                    self.stage = Stages::Start;
+                } else if motions.contains(&c) {
+                    self.input.push(c);
+                    self.stage = Stages::End;
+                } else if needs_param.contains(&c) {
+                    self.input.push(c);
+                    self.stage = Stages::NeedsParam;
+                } else if leader == c {
+                    self.input.push_str("<leader>");
+                    self.stage = Stages::Leader;
+                }
+            },
+            Stages::NeedsParam => {
+                self.input.push(c);
+                self.stage = Stages::End;
+            },
+            Stages::Leader => {
+                // TODO: leader functions
+            }
+            Stages::End => self.stage = Stages::Start,
+        }
+
+        self.stage.clone()
+    }
+
+
+    fn refresh(&mut self) {
+        self.stage = Stages::default();
+        self.input = String::new();
+    }
+}
+
+
+
 // TODO: figure how to do leader
 pub struct MotionBuffer {
     pub action: Option<String>,
@@ -35,7 +100,7 @@ impl MotionBuffer {
         // IDEA: trigger parsing when motion is hit
             // should I mark mode changers (i) as a motion for simplicity
 
-        // TODO: determine how to use command_arg for f/t search, and o/O
+        // TODO: determine how to use command_arg for f/t search
         let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
         let actions = ['d', 's', 'f'];
 
@@ -75,9 +140,7 @@ impl MotionBuffer {
     }
 }
 
-// WORK IN PROGRESS ==========
 pub struct MotionHandler {
-    // TODO: might need to make this a listener for KeyEvents
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
     pub clear: mpsc::UnboundedReceiver<bool>,
     pub motion_buffer: MotionBuffer, // used to parse motions
