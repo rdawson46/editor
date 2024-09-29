@@ -1,11 +1,11 @@
 use crate::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
-    motion::{MotionBuffer, MotionHandler},
+    motion::MotionHandler,
     X_OFFSET,
     // window::Window
 };
-use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent, MouseEventKind, MouseButton};
+use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use color_eyre::eyre::Result;
 use std::{
     io::Write,
@@ -58,7 +58,7 @@ pub struct Editor {
 
     pub motion_sender: UnboundedSender<char>,
     pub clear_sender: UnboundedSender<bool>,
-    pub motion_listener: UnboundedReceiver<MotionBuffer>,
+    pub motion_listener: UnboundedReceiver<String>,
     pub motion_task: Option<JoinHandle<()>>,
 }
 
@@ -134,6 +134,8 @@ impl Editor {
     }
 
     // NOTE: display functions
+    //
+    // TODO: find way to get motion string
     pub fn mode_display(&mut self) -> (Paragraph, Option<Paragraph>) {
         match &current_buf!(self).mode {
             Mode::Insert => {
@@ -141,18 +143,6 @@ impl Editor {
             },
             Mode::Normal => {
                 let motion_str = "".to_string();
-
-                /*
-                   match &self.motion.number {
-                   Some(value) => motion_str.push_str(value.clone().as_str()),
-                   None => {}
-                   }
-
-                   match &self.motion.action {
-                   Some(value) => motion_str.push_str(value.clone().as_str()),
-                   None => {}
-                   }
-                   */
 
                 let status = match &mut self.message {
                     Some(value) => value.to_owned(),
@@ -324,44 +314,9 @@ impl Editor {
     }
 
 
-    // NOTE: motion parsing function
-    // might have to be async for timming
-    //  could possile use channels for this
-    //  might need an action function
-    //  will probably remove returned result
-    pub fn parse(&mut self, motion_buffer: MotionBuffer) -> Result<u32, &str> {
-        let count = match motion_buffer.number{
-            Some(value) => value.parse::<u32>().unwrap_or(0),
-            None => 1,
-        };
-
-        let motion = match motion_buffer.motion {
-            Some(value) => value.clone(),
-            None => "".to_string(),
-        };
-
-        // TODO: figure out how have these commands run
-        let action = match motion_buffer.action {
-            Some(value) => value.clone(),
-            None => "".to_string(),
-        };
-
-        let action_args = match motion_buffer.action_arg {
-            Some(value) => value.clone(),
-            None => "".to_string(),
-        };
-
-        for _ in 0..count {
-            // perform action then move cursor
-            self.motion_func(&motion);
-            self.action_func(&action, &action_args);
-
-            match &current_buf!(self).mode {
-                Mode::Normal => {},
-                _ => break,
-            }
-        }
-
+    // TODO: 
+    // create a simple way to parse motions from the string output
+    pub fn parse(&mut self, motion: String) -> Result<u32, &str> {
         Ok(0)
     }
 
@@ -589,7 +544,7 @@ impl Editor {
         };
     }
 
-    pub async fn next_motion(&mut self) -> Result<MotionBuffer> {
+    pub async fn next_motion(&mut self) -> Result<String> {
         let event = self.motion_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
         event
     }

@@ -63,6 +63,9 @@ impl StateMachine {
         self.state.clone()
     }
 
+    fn fetch(&mut self) -> String {
+        return self.input.clone();
+    }
 
     fn refresh(&mut self) {
         self.state = States::default();
@@ -71,95 +74,23 @@ impl StateMachine {
 }
 
 
-
-// TODO: figure how to do leader
-pub struct MotionBuffer {
-    pub action: Option<String>,
-    pub action_arg: Option<String>,
-    pub number: Option<String>,
-    pub motion: Option<String>,
-}
-
-impl Clone for MotionBuffer {
-    fn clone(&self) -> Self {
-        let mut new_mb = MotionBuffer::new();
-
-        new_mb.action = self.action.clone();
-        new_mb.action_arg = self.action_arg.clone();
-        new_mb.number = self.number.clone();
-        new_mb.motion = self.motion.clone();
-
-        new_mb
-    }
-}
-
-impl MotionBuffer {
-    pub fn new() -> Self {
-        MotionBuffer { action: None, action_arg: None, number: None, motion: None }
-    }
-
-    pub fn push(&mut self, chr: char) -> Option<u32> {
-        // IDEA: trigger parsing when motion is hit
-            // should I mark mode changers (i) as a motion for simplicity
-
-        // TODO: determine how to use command_arg for f/t search
-        let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
-        let actions = ['d', 's', 'f'];
-
-        if chr.is_digit(10) {
-            if let Some(number) = &mut self.number {
-                number.push(chr);
-            } else {
-                if chr == '0' {
-                    self.motion = Some(String::from(chr));
-                    return Some(0);
-                }
-                self.number = Some(String::from(chr));
-            }
-        } else if motions.contains(&chr) {
-            if let Some(motion) = &mut self.motion {
-                motion.push(chr);
-            } else {
-                self.motion = Some(String::from(chr));
-            }
-            return Some(0);
-            
-        } else if actions.contains(&chr) {
-            if let Some(command) = &mut self.action {
-                command.push(chr);
-            } else {
-                self.action = Some(String::from(chr));
-            }
-        }
-
-        None
-    }
-
-    pub fn clear(&mut self) {
-        self.action = None;
-        self.number = None;
-        self.motion = None;
-    }
-}
-
 pub struct MotionHandler {
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
     pub clear: mpsc::UnboundedReceiver<bool>,
-    pub motion_buffer: MotionBuffer, // used to parse motions
-    pub output: mpsc::UnboundedSender<MotionBuffer>, // send out action when ready to use
+    pub state_machine: StateMachine, // used to parse motions
+    pub output: mpsc::UnboundedSender<String>, // send out action when ready to use
 }
 
-
 impl MotionHandler {
-    pub fn new(output: mpsc::UnboundedSender<MotionBuffer>) -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>) {
+    pub fn new(output: mpsc::UnboundedSender<String>) -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>) {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
         let (clear_sender, clear_listener) = mpsc::unbounded_channel::<bool>();
-        let motion_b = MotionBuffer::new();
+        let state_m = StateMachine::new();
 
         let motion = MotionHandler {
             listener,
             clear: clear_listener,
-            motion_buffer: motion_b,
+            state_machine: state_m,
             output
         };
 
@@ -171,23 +102,27 @@ impl MotionHandler {
             recv = self.listener.recv() => {
                 if let Some(c) = recv {
                     let c = c.clone();
-                    let x = self.motion_buffer.push(c);
+                    let x = self.state_machine.recv(c);
 
-                    if let Some(_) = x {
-                        let new_motion = self.motion_buffer.clone();
-                        self.motion_buffer.clear();
-                        let _res = self.send(new_motion);
+                    match x {
+                        States::End => {
+                            let finished_motion = self.state_machine.fetch();
+                            self.state_machine.refresh();
+                            let _res = self.send(finished_motion);
+                        },
+                        _ => {},
                     }
+
                 }
             }
 
             _ = self.clear.recv() => {
-                self.motion_buffer.clear()
+                self.state_machine.refresh();
             }
         }
     }
 
-    fn send(&mut self, a: MotionBuffer) -> Option<MotionBuffer> {
+    fn send(&mut self, a: String) -> Option<String> {
         let res = self.output.send(a);
         if let Ok(_) = res {
             return None;
