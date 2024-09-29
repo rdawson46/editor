@@ -3,10 +3,12 @@ use tokio::{sync::mpsc, select};
 /* IDEA:
  * make the motion buffer a state machine
  *
+ * need a new idea of how to process chars
+ *  - need a way to generate an automatic table
  */
 
 #[derive(Default, Clone, Copy)]
-enum Stages {
+enum States {
     #[default] Start,
     Leader,
     NeedsParam,
@@ -14,56 +16,56 @@ enum Stages {
 }
 
 struct StateMachine {
-    stage: Stages,
+    state: States,
     input: String,
 }
 
 impl StateMachine {
     fn new() -> Self {
         StateMachine{
-            stage: Stages::default(),
+            state: States::default(),
             input: String::new(),
         }
     }
 
     // need to establish s
-    fn recv(&mut self, c: char) -> Stages {
+    fn recv(&mut self, c: char) -> States {
         let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
         let needs_param = ['d', 'f'];
         let leader = ' ';
 
-        match &self.stage {
-            Stages::Start => {
+        match &self.state {
+            States::Start => {
                 if c.is_digit(10) {
                     self.input.push(c);
-                    self.stage = Stages::Start;
+                    self.state = States::Start;
                 } else if motions.contains(&c) {
                     self.input.push(c);
-                    self.stage = Stages::End;
+                    self.state = States::End;
                 } else if needs_param.contains(&c) {
                     self.input.push(c);
-                    self.stage = Stages::NeedsParam;
+                    self.state = States::NeedsParam;
                 } else if leader == c {
                     self.input.push_str("<leader>");
-                    self.stage = Stages::Leader;
+                    self.state = States::Leader;
                 }
             },
-            Stages::NeedsParam => {
+            States::NeedsParam => {
                 self.input.push(c);
-                self.stage = Stages::End;
+                self.state = States::End;
             },
-            Stages::Leader => {
+            States::Leader => {
                 // TODO: leader functions
             }
-            Stages::End => self.stage = Stages::Start,
+            States::End => self.state = States::Start,
         }
 
-        self.stage.clone()
+        self.state.clone()
     }
 
 
     fn refresh(&mut self) {
-        self.stage = Stages::default();
+        self.state = States::default();
         self.input = String::new();
     }
 }
