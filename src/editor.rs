@@ -1,7 +1,6 @@
 use crate::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
-    motion::MotionHandler,
     X_OFFSET,
     // window::Window
 };
@@ -27,8 +26,7 @@ use tokio::{
     sync::mpsc::{
         UnboundedReceiver,
         UnboundedSender,
-    },
-    task::JoinHandle,
+    }
 };
 
 macro_rules! current_buf {
@@ -59,28 +57,15 @@ pub struct Editor {
     pub motion_sender: UnboundedSender<char>,
     pub clear_sender: UnboundedSender<bool>,
     pub motion_listener: UnboundedReceiver<String>,
-    pub motion_task: Option<JoinHandle<()>>,
 }
 
 impl Editor {
-    pub fn new() -> Result<Editor> {
+    pub fn new(motion_sender: mpsc::UnboundedSender<char>, clear_sender: mpsc::UnboundedSender<bool>, motion_buffer_listener: mpsc::UnboundedReceiver<String>) -> Result<Editor> {
         // port address for logger
         let port = match std::env::args().nth(2) {
             Some(value) => value,
             None => "".to_string()
         };
-
-
-        let (motion_buffer_sender, motion_buffer_listener) = mpsc::unbounded_channel(); 
-
-        // motion sender is for key events
-        let (mut motion, motion_sender, clear_sender) = MotionHandler::new(motion_buffer_sender);
-
-        let motion_task = tokio::spawn(async move {
-            loop {
-                motion.listen().await;
-            }
-        });
 
         if port != "" {
             let stream = TcpStream::connect(format!("127.0.0.1:{}", port));
@@ -97,7 +82,6 @@ impl Editor {
                         message: None,
 
                         motion_listener: motion_buffer_listener,
-                        motion_task: Some(motion_task),
                         motion_sender,
                         clear_sender,
                     });
@@ -115,7 +99,6 @@ impl Editor {
             message: None,
 
             motion_listener: motion_buffer_listener,
-            motion_task: Some(motion_task),
             motion_sender,
             clear_sender,
         });
@@ -136,14 +119,12 @@ impl Editor {
     // NOTE: display functions
     //
     // TODO: find way to get motion string
-    pub fn mode_display(&mut self) -> (Paragraph, Option<Paragraph>) {
+    pub fn mode_display(&mut self) -> Paragraph {
         match &current_buf!(self).mode {
             Mode::Insert => {
-                (Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP)), None)
+                Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
             },
             Mode::Normal => {
-                let motion_str = "".to_string();
-
                 let status = match &mut self.message {
                     Some(value) => value.to_owned(),
                     None => "-- Normal --".to_string(),
@@ -154,15 +135,10 @@ impl Editor {
                         .borders(Borders::TOP)
                         .border_style(Style::new().blue()));
 
-                let motion = Paragraph::new(format!("{}", motion_str))
-                    .block(Block::default()
-                        .borders(Borders::TOP)
-                        .border_style(Style::new().blue()))
-                    .alignment(Alignment::Center);
-                (status, Some(motion))
+                status
             },
             Mode::Command => {
-                (Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP)), None)
+                Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
             },
             Mode::Visual{..} => todo!("impl visual mode for ui"),
         }
@@ -565,14 +541,6 @@ impl Drop for Editor {
         match std::mem::replace(&mut self.logger, None) {
             Some(stream) => {
                 drop(stream);
-            },
-            None => {},
-        }
-
-
-        match std::mem::replace(&mut self.motion_task, None) {
-            Some(handle) => {
-                handle.abort();
             },
             None => {},
         }

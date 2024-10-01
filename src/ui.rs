@@ -1,12 +1,12 @@
 use std::rc::Rc;
 use crate::{
-    Event,
-    Tui,
-    X_OFFSET,
-    editor::Editor
+    editor::Editor, motion::MotionHandler, Event, Tui, X_OFFSET
 };
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
+    widgets::{Block, Borders, Paragraph},
+    prelude::Style,
+    style::Stylize,
     Frame,
 };
 
@@ -34,13 +34,21 @@ fn get_layouts(f: &mut Frame<'_>) -> (Rc<[Rect]>, Rc<[Rect]>) {
 }
 
 
-pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
+// TODO: fix this to allow motions
+pub fn ui(f: &mut Frame<'_>, editor: &mut Editor, motion: &mut MotionHandler){
     let (wrapper_layout, num_text_layout) = get_layouts(f);
     editor.resize((num_text_layout[1].width, num_text_layout[1].height));
 
-    let (status, motion) = editor.mode_display();
+    let status = editor.mode_display();
+    let motion = motion.get_text();
+
     match motion {
         Some(motion) => {
+
+            let motion = Paragraph::new(motion)
+                .block(Block::default()
+                       .borders(Borders::TOP)
+                       .border_style(Style::new().blue()));
             let status_motion = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints(vec![
@@ -50,7 +58,7 @@ pub fn ui(f: &mut Frame<'_>, editor: &mut Editor){
                 .split(wrapper_layout[1]);
 
             f.render_widget(status.to_owned(), status_motion[0]);
-            f.render_widget(motion.to_owned(), status_motion[1]);
+            f.render_widget(motion, status_motion[1]);
         },
         None => {
             f.render_widget(status.to_owned(), wrapper_layout[1]);

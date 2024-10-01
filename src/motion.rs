@@ -1,4 +1,5 @@
-use tokio::{sync::mpsc, select};
+use color_eyre::eyre::Result;
+use tokio::{sync::mpsc, select, task::JoinHandle};
 
 /* IDEA:
  * make the motion buffer a state machine
@@ -63,7 +64,7 @@ impl StateMachine {
         self.state.clone()
     }
 
-    fn fetch(&mut self) -> String {
+    fn fetch(&self) -> String {
         return self.input.clone();
     }
 
@@ -77,24 +78,27 @@ impl StateMachine {
 pub struct MotionHandler {
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
     pub clear: mpsc::UnboundedReceiver<bool>,
-    pub state_machine: StateMachine, // used to parse motions
+    state_machine: StateMachine, // used to parse motions
     pub output: mpsc::UnboundedSender<String>, // send out action when ready to use
+    thread: Option<JoinHandle<()>>,
 }
 
 impl MotionHandler {
-    pub fn new(output: mpsc::UnboundedSender<String>) -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>) {
+    pub fn new() -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>, mpsc::UnboundedReceiver<String>) {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
         let (clear_sender, clear_listener) = mpsc::unbounded_channel::<bool>();
         let state_m = StateMachine::new();
+        let (output, input) = mpsc::unbounded_channel::<String>();
 
         let motion = MotionHandler {
             listener,
             clear: clear_listener,
             state_machine: state_m,
-            output
+            output,
+            thread: None
         };
 
-        (motion, sender, clear_sender)
+        (motion, sender, clear_sender, input)
     }
 
     pub async fn listen(&mut self) {
@@ -128,5 +132,18 @@ impl MotionHandler {
             return None;
         }
         Some(res.unwrap_err().0)
+    }
+
+    pub fn get_text(&self) -> Option<String> {
+        if self.state_machine.input.len() != 0 {
+            return Some(self.state_machine.fetch())
+        }
+        None
+    }
+
+    // TODO: should I have start function? or start at creation
+    // NOTE: model after tui start
+    pub fn start(&mut self) -> Result<()> {
+        Ok(())
     }
 }

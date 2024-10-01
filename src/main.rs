@@ -16,6 +16,7 @@ use crate::{
     editor::Editor,
     tui::{Tui, Event},
     ui::{ui, update},
+    motion::MotionHandler,
 };
 use tokio::select;
 use color_eyre::eyre::Result;
@@ -40,12 +41,16 @@ async fn run() -> Result<()> {
     let filename = filename.unwrap_or(String::from("."));
 
     let mut tui = Tui::new()?.tick_rate(1.0).render_rate(30.0);
+    let (mut motion, motion_sender, clear_sender, motion_buffer_listener) = MotionHandler::new();
+    let mut editor = Editor::new(motion_sender, clear_sender, motion_buffer_listener)?;
 
-    let mut editor = Editor::new()?;
     editor.new_buffer(&filename);
 
     tui.enter()?; 
     tui.start();
+
+    // TODO: launch thread for motion, which is the handler
+    motion.start()?;
 
     loop {
         select! {
@@ -56,7 +61,7 @@ async fn run() -> Result<()> {
                             Event::Render => {
                                 tui.terminal.draw(|f| {
                                     editor.set_cursor(f);
-                                    ui(f, &mut editor);
+                                    ui(f, &mut editor, &mut motion);
                                     // color(f)???  // might be helpful with highlighting
                                 })?;
                             },
