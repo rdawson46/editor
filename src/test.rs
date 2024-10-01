@@ -1,4 +1,3 @@
-
 #[tokio::test]
 async fn test_editor(){
     use crate::Editor;
@@ -42,8 +41,6 @@ fn test_buffer() {
     assert_eq!(b.buffer_type, BufferType::Directory);
 }
 
-#[test]
-fn test_motion() {}
 
 #[test]
 fn test_start_and_close() {

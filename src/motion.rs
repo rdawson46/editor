@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use tokio::{sync::mpsc, select, task::JoinHandle};
+use tokio::{select, sync::mpsc, task::JoinHandle};
 
 /* IDEA:
  * make the motion buffer a state machine
@@ -8,7 +8,7 @@ use tokio::{sync::mpsc, select, task::JoinHandle};
  *  - need a way to generate an automatic table
  */
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug, PartialEq)]
 enum States {
     #[default] Start,
     Leader,
@@ -88,7 +88,7 @@ impl MotionHandler {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
         let (clear_sender, clear_listener) = mpsc::unbounded_channel::<bool>();
         let state_m = StateMachine::new();
-        let (output, input) = mpsc::unbounded_channel::<String>();
+        let (output, input) = mpsc::unbounded_channel::<String>(); // output from MotionHandler perspective
 
         let motion = MotionHandler {
             listener,
@@ -126,6 +126,24 @@ impl MotionHandler {
         }
     }
 
+    fn handle_char(&mut self, c: Option<char>) -> Option<()>{
+        if let Some(c) = c {
+            let x = self.state_machine.recv(c);
+
+            match x {
+                States::End => {
+                    let finished_motion = self.state_machine.fetch();
+                    self.state_machine.refresh();
+                    let _res = self.send(finished_motion);
+                    return Some(());
+                }
+                _ => {},
+            }
+        }
+
+        None
+    }
+
     fn send(&mut self, a: String) -> Option<String> {
         let res = self.output.send(a);
         if let Ok(_) = res {
@@ -146,4 +164,25 @@ impl MotionHandler {
     pub fn start(&mut self) -> Result<()> {
         Ok(())
     }
+}
+
+#[test]
+fn test_motion() {
+    use crate::MotionHandler;
+
+    let (mut motion, _motion_sender, _clear_sender, _motion_buffer_listener) = MotionHandler::new();
+
+    assert_eq!(motion.state_machine.state, States::Start);
+
+    motion.handle_char(Some('d'));
+    assert_eq!(motion.state_machine.input, "d");
+    assert_eq!(motion.state_machine.state, States::NeedsParam);
+
+    motion.state_machine.refresh();
+    assert_eq!(motion.state_machine.input, "");
+
+    // should restart
+    motion.handle_char(Some('j'));
+    assert_eq!(motion.state_machine.input, "");
+    assert_eq!(motion.state_machine.state, States::Start);
 }
