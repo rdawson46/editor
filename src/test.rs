@@ -2,8 +2,10 @@
 #[tokio::test]
 async fn test_editor(){
     use crate::Editor;
+    use crate::MotionHandler;
 
-    let mut editor = Editor::new().unwrap();
+    let (_motion, motion_sender, clear_sender, motion_buffer_listener) = MotionHandler::new();
+    let mut editor = Editor::new(motion_sender, clear_sender, motion_buffer_listener).unwrap();
 
     println!("testing logger");
     assert!(editor.logger.is_none());
