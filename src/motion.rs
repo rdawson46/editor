@@ -1,5 +1,5 @@
 use color_eyre::eyre::Result;
-use tokio::{select, sync::mpsc, task::JoinHandle};
+use tokio::sync::mpsc;
 
 /* IDEA:
  * make the motion buffer a state machine
@@ -80,7 +80,6 @@ pub struct MotionHandler {
     pub clear: mpsc::UnboundedReceiver<bool>,
     state_machine: StateMachine, // used to parse motions
     pub output: mpsc::UnboundedSender<String>, // send out action when ready to use
-    thread: Option<JoinHandle<()>>,
 }
 
 impl MotionHandler {
@@ -95,38 +94,16 @@ impl MotionHandler {
             clear: clear_listener,
             state_machine: state_m,
             output,
-            thread: None
         };
 
         (motion, sender, clear_sender, input)
     }
 
-    pub async fn listen(&mut self) {
-        select! {
-            recv = self.listener.recv() => {
-                if let Some(c) = recv {
-                    let c = c.clone();
-                    let x = self.state_machine.recv(c);
-
-                    match x {
-                        States::End => {
-                            let finished_motion = self.state_machine.fetch();
-                            self.state_machine.refresh();
-                            let _res = self.send(finished_motion);
-                        },
-                        _ => {},
-                    }
-
-                }
-            }
-
-            _ = self.clear.recv() => {
-                self.state_machine.refresh();
-            }
-        }
+    pub fn refresh(&mut self) {
+        self.state_machine.refresh();
     }
 
-    fn handle_char(&mut self, c: Option<char>) -> Option<()>{
+    pub fn handle_char(&mut self, c: Option<char>) {
         if let Some(c) = c {
             let x = self.state_machine.recv(c);
 
@@ -135,13 +112,10 @@ impl MotionHandler {
                     let finished_motion = self.state_machine.fetch();
                     self.state_machine.refresh();
                     let _res = self.send(finished_motion);
-                    return Some(());
                 }
                 _ => {},
             }
         }
-
-        None
     }
 
     fn send(&mut self, a: String) -> Option<String> {

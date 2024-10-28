@@ -88,6 +88,14 @@ async fn run() -> Result<()> {
                         editor.should_quit = true;
                     }
                 }
+            },
+
+            c = motion.listener.recv() => {
+                motion.handle_char(c);
+            }
+
+            _ = motion.clear.recv() => {
+                motion.refresh();
             }
         }
 
