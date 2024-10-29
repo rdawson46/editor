@@ -293,6 +293,7 @@ impl Editor {
     // TODO: 
     // create a simple way to parse motions from the string output
     pub fn parse(&mut self, motion: String) -> Result<u32, &str> {
+        self.send(format!("recv: {motion}"));
         Ok(0)
     }
 

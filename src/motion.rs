@@ -52,8 +52,13 @@ impl StateMachine {
                 }
             },
             States::NeedsParam => {
-                self.input.push(c);
-                self.state = States::End;
+                if c.is_digit(10) {
+                    self.input.push(c);
+                    self.state = States::NeedsParam;
+                } else {
+                    self.input.push(c);
+                    self.state = States::End;
+                }
             },
             States::Leader => {
                 // TODO: leader functions
@@ -131,12 +136,6 @@ impl MotionHandler {
             return Some(self.state_machine.fetch())
         }
         None
-    }
-
-    // TODO: should I have start function? or start at creation
-    // NOTE: model after tui start
-    pub fn start(&mut self) -> Result<()> {
-        Ok(())
     }
 }
 

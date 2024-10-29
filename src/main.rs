@@ -27,11 +27,12 @@ static X_OFFSET: usize = 5;
 /* ====================
  Map to improve event loop: 
   Prep:
+    - figure out to get text from motionbuffer in MotionHandler 
     - establish a widget for:
         - editor
         - buffer
         - status line
-    - figure out to get text from motionbuffer in MotionHandler 
+        - file tree
 
 ==================== */
 
@@ -49,11 +50,9 @@ async fn run() -> Result<()> {
     tui.enter()?; 
     tui.start();
 
-    // TODO: launch thread for motion, which is the handler
-    motion.start()?;
-
     loop {
         select! {
+            // get event from tui, draw on render, else update
             event = tui.next() => {
                 match event {
                     Ok(event) => {
@@ -77,6 +76,7 @@ async fn run() -> Result<()> {
                 }
             },
 
+            // editor recv motion_buffer
             motion_buffer = editor.next_motion() => {
                 match motion_buffer {
                     Ok(motion_buffer) => {
@@ -90,6 +90,7 @@ async fn run() -> Result<()> {
                 }
             },
 
+            // recv char from editor
             c = motion.listener.recv() => {
                 motion.handle_char(c);
             }
