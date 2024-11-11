@@ -12,7 +12,7 @@ use std::{
     usize,
 };
 use ratatui::{
-    prelude::{Alignment, Style},
+    prelude::Style,
     style::Stylize,
     widgets::{
         Block,
@@ -294,6 +294,24 @@ impl Editor {
     // create a simple way to parse motions from the string output
     pub fn parse(&mut self, motion: String) -> Result<u32, &str> {
         self.send(format!("recv: {motion}"));
+        // parse, problem solved
+
+        let motion = make_motion_vec(motion);
+
+        if motion.len() == 1 {
+            match motion.get(0) {
+                Some(m) => {
+                    self.motion_func(m);
+                },
+                None => {
+                    self.send(format!("Error in parse: m == None"));
+                },
+            }
+        } else {
+
+        }
+
+
         Ok(0)
     }
 
@@ -546,4 +564,36 @@ impl Drop for Editor {
             None => {},
         }
     }
+}
+
+fn make_motion_vec(input: String) -> Vec<String> {
+    let mut res = Vec::new();
+    let mut current = String::new();
+
+    for c in input.chars() {
+        if c.is_alphabetic() {
+            if !current.is_empty(){
+                res.push(current.clone());
+                current.clear();
+            }
+
+            res.push(String::from(c));
+        } else if c.is_digit(10) {
+            current.push(c);
+        }
+    }
+
+    if !current.is_empty() {
+        res.push(current);
+    }
+
+    res
+}
+
+#[test]
+fn test_make_motion_vec(){
+    assert_eq!(make_motion_vec(String::from("45d7j")), vec!["45", "d", "7", "j"]);
+    assert_eq!(make_motion_vec(String::from("abc123j")), vec!["a", "b", "c", "123", "j"]);
+    assert_eq!(make_motion_vec(String::from("123a")), vec!["123", "a"]);
+    assert_eq!(make_motion_vec(String::from("j")), vec!["j"]);
 }

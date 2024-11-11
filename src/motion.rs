@@ -1,4 +1,3 @@
-use color_eyre::eyre::Result;
 use tokio::sync::mpsc;
 
 /* IDEA:
