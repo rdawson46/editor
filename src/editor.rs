@@ -7,9 +7,7 @@ use crate::{
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use color_eyre::eyre::Result;
 use std::{
-    io::Write,
-    net::TcpStream,
-    usize,
+    io::Write, net::TcpStream, str::FromStr, usize
 };
 use ratatui::{
     prelude::Style,
@@ -298,7 +296,9 @@ impl Editor {
 
         let motion = make_motion_vec(motion);
 
-        if motion.len() == 1 {
+        if motion.len() == 0 {
+            unreachable!("Motion len == 0")
+        } else if motion.len() == 1 {
             match motion.get(0) {
                 Some(m) => {
                     self.motion_func(m);
@@ -308,7 +308,24 @@ impl Editor {
                 },
             }
         } else {
+            let mut number = 1;
+            let mut m = String::from("");
+            let mut f = String::from("");
 
+            for (i, b) in motion.iter().enumerate() {
+                if i == motion.len() - 1 {
+                    m = b.to_string();
+                } else if b.parse::<usize>().is_ok() {
+                    number *= b.parse().unwrap_or(1);
+                } else {
+                    f = b.to_string();
+                }
+            }
+
+            for _ in 0..number {
+                self.motion_func(&m);
+                self.action_func(&f, &String::from(" "));
+            }
         }
 
 
@@ -571,15 +588,15 @@ fn make_motion_vec(input: String) -> Vec<String> {
     let mut current = String::new();
 
     for c in input.chars() {
-        if c.is_alphabetic() {
+        if c.is_digit(10) {
+            current.push(c);
+        } else {
             if !current.is_empty(){
                 res.push(current.clone());
                 current.clear();
             }
 
             res.push(String::from(c));
-        } else if c.is_digit(10) {
-            current.push(c);
         }
     }
 
@@ -596,4 +613,6 @@ fn test_make_motion_vec(){
     assert_eq!(make_motion_vec(String::from("abc123j")), vec!["a", "b", "c", "123", "j"]);
     assert_eq!(make_motion_vec(String::from("123a")), vec!["123", "a"]);
     assert_eq!(make_motion_vec(String::from("j")), vec!["j"]);
+    assert_eq!(make_motion_vec(String::from(":")), vec![":"]);
+    assert_eq!(make_motion_vec(String::from("2:")), vec!["2", ":"]);
 }

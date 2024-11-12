@@ -1,5 +1,3 @@
-use std::char;
-
 #[derive(PartialEq, Eq, Clone, Copy)]
 enum CharKind {
     Space,
