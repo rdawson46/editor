@@ -7,7 +7,7 @@ use crate::{
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use color_eyre::eyre::Result;
 use std::{
-    io::Write, net::TcpStream, str::FromStr, usize
+    io::Write, net::TcpStream, usize
 };
 use ratatui::{
     prelude::Style,
@@ -54,11 +54,11 @@ pub struct Editor {
 
     pub motion_sender: UnboundedSender<char>,
     pub clear_sender: UnboundedSender<bool>,
-    pub motion_listener: UnboundedReceiver<String>,
+    pub motion_listener: UnboundedReceiver<Vec<String>>,
 }
 
 impl Editor {
-    pub fn new(motion_sender: mpsc::UnboundedSender<char>, clear_sender: mpsc::UnboundedSender<bool>, motion_buffer_listener: mpsc::UnboundedReceiver<String>) -> Result<Editor> {
+    pub fn new(motion_sender: mpsc::UnboundedSender<char>, clear_sender: mpsc::UnboundedSender<bool>, motion_buffer_listener: mpsc::UnboundedReceiver<Vec<String>>) -> Result<Editor> {
         // port address for logger
         let port = match std::env::args().nth(2) {
             Some(value) => value,
@@ -290,11 +290,8 @@ impl Editor {
 
     // TODO: 
     // create a simple way to parse motions from the string output
-    pub fn parse(&mut self, motion: String) -> Result<u32, &str> {
-        self.send(format!("recv: {motion}"));
-        // parse, problem solved
-
-        let motion = make_motion_vec(motion);
+    pub fn parse(&mut self, motion: Vec<String>) -> Result<u32, &str> {
+        self.send(format!("recv: {}", make_motion_string(&motion)));
 
         if motion.len() == 0 {
             unreachable!("Motion len == 0")
@@ -556,7 +553,7 @@ impl Editor {
         };
     }
 
-    pub async fn next_motion(&mut self) -> Result<String> {
+    pub async fn next_motion(&mut self) -> Result<Vec<String>> {
         let event = self.motion_listener.recv().await.ok_or(color_eyre::eyre::eyre!("Unable to get action"));
         event
     }
@@ -583,36 +580,21 @@ impl Drop for Editor {
     }
 }
 
-fn make_motion_vec(input: String) -> Vec<String> {
-    let mut res = Vec::new();
-    let mut current = String::new();
-
-    for c in input.chars() {
-        if c.is_digit(10) {
-            current.push(c);
-        } else {
-            if !current.is_empty(){
-                res.push(current.clone());
-                current.clear();
-            }
-
-            res.push(String::from(c));
-        }
+fn make_motion_string(input: &Vec<String>) -> String {
+    let mut s = String::new();
+    for i in input {
+        s.push_str(i);
     }
-
-    if !current.is_empty() {
-        res.push(current);
-    }
-
-    res
+    s
 }
 
+
 #[test]
-fn test_make_motion_vec(){
-    assert_eq!(make_motion_vec(String::from("45d7j")), vec!["45", "d", "7", "j"]);
-    assert_eq!(make_motion_vec(String::from("abc123j")), vec!["a", "b", "c", "123", "j"]);
-    assert_eq!(make_motion_vec(String::from("123a")), vec!["123", "a"]);
-    assert_eq!(make_motion_vec(String::from("j")), vec!["j"]);
-    assert_eq!(make_motion_vec(String::from(":")), vec![":"]);
-    assert_eq!(make_motion_vec(String::from("2:")), vec!["2", ":"]);
+fn test_make_motion_string(){
+    assert_eq!(make_motion_string(&vec!["45".to_string(), "d".to_string(), "7".to_string(), "j".to_string()]), String::from("45d7j"));
+    assert_eq!(make_motion_string(&vec!["a".to_string(), "b".to_string(), "c".to_string(), "123".to_string(), "j".to_string()]), String::from("abc123j"));
+    assert_eq!(make_motion_string(&vec!["123".to_string(), "a".to_string()]), String::from("123a"));
+    assert_eq!(make_motion_string(&vec!["j".to_string()]), String::from("j"));
+    assert_eq!(make_motion_string(&vec![":".to_string()]), String::from(":"));
+    assert_eq!(make_motion_string(&vec!["2".to_string(), ":".to_string()]), String::from("2:"));
 }

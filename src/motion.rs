@@ -17,15 +17,39 @@ enum States {
 
 struct StateMachine {
     state: States,
-    input: String,
+    queue: String,
+    input: Vec<String>,
 }
 
 impl StateMachine {
     fn new() -> Self {
         StateMachine{
             state: States::default(),
-            input: String::new(),
+            queue: String::new(),
+            input: Vec::new(),
         }
+    }
+
+    fn push(&mut self, c: char) {
+        if c.is_digit(10) {
+            self.input.push(c.to_string());
+        } else {
+            if !self.queue.is_empty() {
+                self.input.push(self.queue.clone());
+                self.queue.clear();
+            }
+
+            self.input.push(String::from(c));
+        }
+    }
+
+    fn push_str(&mut self, s: &str) {
+        if !self.queue.is_empty() {
+            self.input.push(self.queue.clone());
+            self.queue.clear();
+        }
+
+        self.input.push(s.to_string());
     }
 
     // need to establish s
@@ -37,25 +61,25 @@ impl StateMachine {
         match &self.state {
             States::Start => {
                 if c.is_digit(10) {
-                    self.input.push(c);
+                    self.push(c);
                     self.state = States::Start;
                 } else if motions.contains(&c) {
-                    self.input.push(c);
+                    self.push(c);
                     self.state = States::End;
                 } else if needs_param.contains(&c) {
-                    self.input.push(c);
+                    self.push(c);
                     self.state = States::NeedsParam;
                 } else if leader == c {
-                    self.input.push_str("<leader>");
+                    self.push_str("<leader>");
                     self.state = States::Leader;
                 }
             },
             States::NeedsParam => {
                 if c.is_digit(10) {
-                    self.input.push(c);
+                    self.push(c);
                     self.state = States::NeedsParam;
                 } else {
-                    self.input.push(c);
+                    self.push(c);
                     self.state = States::End;
                 }
             },
@@ -68,13 +92,25 @@ impl StateMachine {
         self.state.clone()
     }
 
-    fn fetch(&self) -> String {
+    fn fetch(&self) -> Vec<String> {
         return self.input.clone();
+    }
+
+    fn to_string(&self) -> String {
+        let mut s = String::new();
+
+        for i in &self.input {
+            s.push_str(i);
+        }
+
+        s.extend(self.queue.clone().chars());
+        s
     }
 
     fn refresh(&mut self) {
         self.state = States::default();
-        self.input = String::new();
+        self.input.clear();
+        self.queue.clear();
     }
 }
 
@@ -83,15 +119,15 @@ pub struct MotionHandler {
     pub listener: mpsc::UnboundedReceiver<char>, // listen for key strokes in normal mode
     pub clear: mpsc::UnboundedReceiver<bool>,
     state_machine: StateMachine, // used to parse motions
-    pub output: mpsc::UnboundedSender<String>, // send out action when ready to use
+    pub output: mpsc::UnboundedSender<Vec<String>>, // send out action when ready to use
 }
 
 impl MotionHandler {
-    pub fn new() -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>, mpsc::UnboundedReceiver<String>) {
+    pub fn new() -> (Self, mpsc::UnboundedSender<char>, mpsc::UnboundedSender<bool>, mpsc::UnboundedReceiver<Vec<String>>) {
         let (sender, listener) = mpsc::unbounded_channel::<char>();
         let (clear_sender, clear_listener) = mpsc::unbounded_channel::<bool>();
         let state_m = StateMachine::new();
-        let (output, input) = mpsc::unbounded_channel::<String>(); // output from MotionHandler perspective
+        let (output, input) = mpsc::unbounded_channel::<Vec<String>>(); // output from MotionHandler perspective
 
         let motion = MotionHandler {
             listener,
@@ -122,7 +158,7 @@ impl MotionHandler {
         }
     }
 
-    fn send(&mut self, a: String) -> Option<String> {
+    fn send(&mut self, a: Vec<String>) -> Option<Vec<String>> {
         let res = self.output.send(a);
         if let Ok(_) = res {
             return None;
@@ -132,7 +168,7 @@ impl MotionHandler {
 
     pub fn get_text(&self) -> Option<String> {
         if self.state_machine.input.len() != 0 {
-            return Some(self.state_machine.fetch())
+            return Some(self.state_machine.to_string());
         }
         None
     }
@@ -147,14 +183,17 @@ fn test_motion() {
     assert_eq!(motion.state_machine.state, States::Start);
 
     motion.handle_char(Some('d'));
-    assert_eq!(motion.state_machine.input, "d");
+    assert_eq!(motion.state_machine.input, vec!["d".to_string()]);
+    assert_eq!(motion.state_machine.queue, "".to_string());
     assert_eq!(motion.state_machine.state, States::NeedsParam);
 
     motion.state_machine.refresh();
-    assert_eq!(motion.state_machine.input, "");
+    assert!(motion.state_machine.input.is_empty());
+    assert!(motion.state_machine.queue.is_empty());
 
     // should restart
     motion.handle_char(Some('j'));
-    assert_eq!(motion.state_machine.input, "");
+    assert!(motion.state_machine.input.is_empty());
+    assert!(motion.state_machine.queue.is_empty());
     assert_eq!(motion.state_machine.state, States::Start);
 }
