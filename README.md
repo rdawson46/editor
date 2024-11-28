@@ -2,7 +2,6 @@
 Terminal editor in rust. Currently a work in progress.
 
 ## To Do
-* work on parsing function within editor
 * widget everything
 * add file tree to side
     * add more functionality to file tree

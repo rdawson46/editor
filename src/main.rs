@@ -61,7 +61,6 @@ async fn run() -> Result<()> {
                                 tui.terminal.draw(|f| {
                                     editor.set_cursor(f);
                                     ui(f, &mut editor, &mut motion);
-                                    // color(f)???  // might be helpful with highlighting
                                 })?;
                             },
                             _ => update(&mut editor, event, &mut tui),

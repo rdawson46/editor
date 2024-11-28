@@ -32,7 +32,7 @@ impl StateMachine {
 
     fn push(&mut self, c: char) {
         if c.is_digit(10) {
-            self.input.push(c.to_string());
+            self.queue.push(c);
         } else {
             if !self.queue.is_empty() {
                 self.input.push(self.queue.clone());
@@ -191,7 +191,15 @@ fn test_motion() {
     assert!(motion.state_machine.input.is_empty());
     assert!(motion.state_machine.queue.is_empty());
 
-    // should restart
+    motion.handle_char(Some('j'));
+    assert!(motion.state_machine.input.is_empty());
+    assert!(motion.state_machine.queue.is_empty());
+    assert_eq!(motion.state_machine.state, States::Start);
+
+    motion.handle_char(Some('1'));
+    motion.handle_char(Some('1'));
+    motion.handle_char(Some('d'));
+    assert_eq!(motion.state_machine.input, vec!["11".to_string(), "d".to_string()]);
     motion.handle_char(Some('j'));
     assert!(motion.state_machine.input.is_empty());
     assert!(motion.state_machine.queue.is_empty());
