@@ -1,4 +1,5 @@
 use tokio::sync::mpsc;
+use std::collections::HashMap;
 
 /* IDEA:
  * make the motion buffer a state machine
@@ -6,6 +7,8 @@ use tokio::sync::mpsc;
  * need a new idea of how to process chars
  *  - need a way to generate an automatic table
  */
+
+
 
 #[derive(Default, Clone, Copy, Debug, PartialEq)]
 enum States {
@@ -15,21 +18,72 @@ enum States {
     End,
 }
 
+enum FunctionType {
+    NeedsParam,
+    Final
+}
+
 struct StateMachine {
     state: States,
     queue: String,
     input: Vec<String>,
+    map: HashMap<String, FunctionType>,
 }
 
+
+macro_rules! hashmap {
+    (@single $($x:tt)*) => (());
+    (@count $($rest:expr),*) => (<[()]>::len(&[$(hashmap!(@single $rest)),*]));
+    ($($key:expr => $value:expr,)+) => { hashmap!($($key => $value),+) };
+    ($($key:expr => $value:expr),*) => {
+        {
+            let _cap = hashmap!(@count $($key),*);
+            let mut _map = ::std::collections::HashMap::with_capacity(_cap);
+            $(
+                let _ = _map.insert($key, $value);
+            )*
+            _map
+        }
+    };
+}
+
+
+// TODO: add functions from state machine
+//
+// reset to start from motions and 'functions'
+// i.e. 'j', 'gg', 'G'
 impl StateMachine {
     fn new() -> Self {
         StateMachine{
             state: States::default(),
             queue: String::new(),
             input: Vec::new(),
+            map: hashmap! {
+                ":".to_string() => FunctionType::Final,
+                "j".to_string() => FunctionType::Final,
+                "k".to_string() => FunctionType::Final,
+                "h".to_string() => FunctionType::Final,
+                "l".to_string() => FunctionType::Final,
+                "i".to_string() => FunctionType::Final,
+                "a".to_string() => FunctionType::Final,
+                "w".to_string() => FunctionType::Final,
+                "b".to_string() => FunctionType::Final,
+                "e".to_string() => FunctionType::Final,
+                "0".to_string() => FunctionType::Final,
+                "$".to_string() => FunctionType::Final,
+                "I".to_string() => FunctionType::Final,
+                "A".to_string() => FunctionType::Final,
+                "0".to_string() => FunctionType::Final,
+                "o".to_string() => FunctionType::Final,
+
+                "d".to_string() => FunctionType::NeedsParam,
+                "f".to_string() => FunctionType::NeedsParam,
+                "g".to_string() => FunctionType::NeedsParam,
+            },
         }
     }
 
+    // TODO: impl this function
     fn push(&mut self, c: char) {
         if c.is_digit(10) {
             self.queue.push(c);
@@ -43,6 +97,7 @@ impl StateMachine {
         }
     }
 
+    // TODO: impl this function
     fn push_str(&mut self, s: &str) {
         if !self.queue.is_empty() {
             self.input.push(self.queue.clone());
@@ -54,21 +109,25 @@ impl StateMachine {
 
     // need to establish s
     fn recv(&mut self, c: char) -> States {
-        let motions =  [':', 'j', 'k', 'h', 'l', 'i', 'a', 'w', 'b', 'e', '0', '$', 'I', 'A', 'O', 'o'];
-        let needs_param = ['d', 'f'];
         let leader = ' ';
-
         match &self.state {
             States::Start => {
                 if c.is_digit(10) {
                     self.push(c);
                     self.state = States::Start;
-                } else if motions.contains(&c) {
-                    self.push(c);
-                    self.state = States::End;
-                } else if needs_param.contains(&c) {
-                    self.push(c);
-                    self.state = States::NeedsParam;
+                } else if let Some(t) = &self.map.get(&c.clone().to_string()){
+                    match t {
+                        FunctionType::NeedsParam => {
+                            // look into how this worked before
+                            self.push(c);
+                            self.state = States::NeedsParam;
+                        },
+
+                        FunctionType::Final => {
+                            self.push(c);
+                            self.state = States::End;
+                        },
+                    }
                 } else if leader == c {
                     self.push_str("<leader>");
                     self.state = States::Leader;

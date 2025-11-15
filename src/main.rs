@@ -79,6 +79,15 @@ async fn run() -> Result<()> {
             motion_buffer = editor.next_motion() => {
                 match motion_buffer {
                     Ok(motion_buffer) => {
+                        // IDEA: 
+                        // use parse to create a function and push the function to a queue to run
+                        // on update tick?
+                        //
+                        // TODO: 
+                        // 1. edit the parsing function to return a function with param &editor
+                        // 2. add an event queue to the editor
+                        // 3. add an update tick
+                        // 4. add a function to consume these fucntions
                         let _ = editor.parse(motion_buffer);
                     },
                     Err(err) => {

@@ -498,10 +498,15 @@ impl Buffer {
                 let reader = read_dir(path.clone()).unwrap();
 
                 for path in reader {
-                    let path = path.unwrap().file_name().into_string().unwrap();
-                    let mut path = String::from(path);
-                    path.push_str("\n");
-                    rope.append(path.into());
+                    if let Ok(name) = path {
+                        let path_name = name.file_name();
+
+                        if let Ok(path_string) = path_name.into_string() {
+                            let mut path = String::from(path_string);
+                            path.push_str("\n");
+                            rope.append(path.into());
+                        }
+                    }
                 }
 
                 self.lines.rope = rope;

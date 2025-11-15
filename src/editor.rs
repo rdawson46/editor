@@ -294,7 +294,7 @@ impl Editor {
         self.send(format!("recv: {}", make_motion_string(&motion)));
 
         if motion.len() == 0 {
-            unreachable!("Motion len == 0")
+            unreachable!("motion len 0");
         } else if motion.len() == 1 {
             match motion.get(0) {
                 Some(m) => {

@@ -110,29 +110,29 @@ impl Tui {
                                 match evt {
                                     crossterm::event::Event::Key(key) => {
                                         if key.kind == crossterm::event::KeyEventKind::Press{
-                                            _event_tx.send(Event::Key(key)).unwrap();
+                                            let _ = _event_tx.send(Event::Key(key));
                                         }
                                     },
                                     crossterm::event::Event::Resize(x,y) => {
-                                        _event_tx.send(Event::Resize(x, y)).unwrap();
+                                        let _ = _event_tx.send(Event::Resize(x, y));
                                     },
                                     crossterm::event::Event::Mouse(mouse_event) => {
-                                        _event_tx.send(Event::Mouse(mouse_event)).unwrap();
+                                        let _ = _event_tx.send(Event::Mouse(mouse_event));
                                     },
                                     _ => {}
                                 }
                             }
                             Some(Err(_)) => {
-                                _event_tx.send(Event::Error).unwrap();
+                                let _ = _event_tx.send(Event::Error);
                             }
                             None => {},
                         }
                     },
                     _ = tick_delay => {
-                        _event_tx.send(Event::Tick).unwrap();
+                        let _ = _event_tx.send(Event::Tick);
                     },
                     _ = render_delay => {
-                        _event_tx.send(Event::Render).unwrap();
+                        let _ = _event_tx.send(Event::Render);
                     }
                 }
             }

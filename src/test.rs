@@ -4,7 +4,11 @@ async fn test_editor(){
     use crate::MotionHandler;
 
     let (_motion, motion_sender, clear_sender, motion_buffer_listener) = MotionHandler::new();
-    let mut editor = Editor::new(motion_sender, clear_sender, motion_buffer_listener).unwrap();
+    let editor_res = Editor::new(motion_sender, clear_sender, motion_buffer_listener);
+
+    assert!(editor_res.is_ok());
+
+    let mut editor = editor_res.unwrap();
 
     println!("testing logger");
     assert!(editor.logger.is_none());
@@ -21,7 +25,10 @@ async fn test_editor(){
 fn test_buffer() {
     use crate::buffer::{Buffer, Mode, BufferType};
 
-    let mut b = Buffer::new(&"./src/main.rs".to_string(), (10, 10)).unwrap();
+    let b_res = Buffer::new(&"./src/main.rs".to_string(), (10, 10));
+    assert!(b_res.is_ok());
+
+    let mut b = b_res.unwrap();
 
     assert_eq!(b.cursor.current.0, 0);
     assert_eq!(b.cursor.current.1, 0);
@@ -37,7 +44,11 @@ fn test_buffer() {
 
     assert_eq!(b.buffer_type, BufferType::File);
 
-    let b = Buffer::new(&".".to_string(), (5, 5)).unwrap();
+    let b_res = Buffer::new(&".".to_string(), (5, 5));
+
+    assert!(b_res.is_ok());
+
+    let b = b_res.unwrap();
     assert_eq!(b.buffer_type, BufferType::Directory);
 }
 
