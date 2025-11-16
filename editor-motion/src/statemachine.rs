@@ -166,7 +166,7 @@ impl StateMachine {
 fn test_motion() {
     let mut sm = StateMachine::new();
 
-    sm.push('d');
+    sm.recv('d');
     assert_eq!(sm.input, vec!["d".to_string()]);
     assert_eq!(sm.state, States::NeedsParam);
 
