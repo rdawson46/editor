@@ -616,6 +616,7 @@ impl Buffer {
             // obvious
             MouseEventKind::ScrollDown => {},
             MouseEventKind::ScrollUp => {},
+            _ => {},
         }
     }
     

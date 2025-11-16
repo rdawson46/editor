@@ -1,28 +1,22 @@
 #[cfg(test)]
 mod test;
 
-mod buffer;
 mod colors;
-mod command;
 mod editor;
-mod motion;
 mod tui;
 mod ui;
 mod widgets;
 mod window;
-mod word;
 
 use crate::{
     editor::Editor,
     tui::{Tui, Event},
     ui::{ui, update},
-    motion::MotionHandler,
 };
+use editor_motion::MotionHandler;
 use tokio::select;
 use color_eyre::eyre::Result;
-
-
-static X_OFFSET: usize = 5;
+use editor_core::X_OFFSET;
 
 /* ====================
  Map to improve event loop: 

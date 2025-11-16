@@ -9,10 +9,8 @@ use ratatui::{
     },
     Frame,
 };
-use crate::{
-    editor::Editor,
-    buffer::{Buffer, Mode},
-};
+use crate::editor::Editor;
+use editor_core::buffer::{Buffer, Mode};
 
 struct BufferWidget {
     text: String,

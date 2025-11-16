@@ -1,7 +1,7 @@
 use std::rc::Rc;
-use crate::{
-    editor::Editor, motion::MotionHandler, Event, Tui, X_OFFSET
-};
+use crate::{editor::Editor, Event, Tui};
+use editor_core::X_OFFSET;
+use editor_motion::MotionHandler;
 use ratatui::{
     layout::{Constraint, Direction, Layout, Rect},
     widgets::{Block, Borders, Paragraph},

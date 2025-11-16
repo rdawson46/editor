@@ -1,8 +1,7 @@
-use crate::{
+use editor_core::{
     buffer::{Buffer, BufferType, Mode},
     command::{Command, CommandKey},
     X_OFFSET,
-    // window::Window
 };
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseEvent};
 use color_eyre::eyre::Result;

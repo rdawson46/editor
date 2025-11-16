@@ -1,7 +1,7 @@
 #[tokio::test]
 async fn test_editor(){
-    use crate::Editor;
-    use crate::MotionHandler;
+    use crate::editor::Editor;
+    use editor_motion::MotionHandler;
 
     let (_motion, motion_sender, clear_sender, motion_buffer_listener) = MotionHandler::new();
     let editor_res = Editor::new(motion_sender, clear_sender, motion_buffer_listener);
@@ -23,7 +23,7 @@ async fn test_editor(){
 
 #[test]
 fn test_buffer() {
-    use crate::buffer::{Buffer, Mode, BufferType};
+    use editor_core::buffer::{Buffer, Mode, BufferType};
 
     let b_res = Buffer::new(&"./src/main.rs".to_string(), (10, 10));
     assert!(b_res.is_ok());

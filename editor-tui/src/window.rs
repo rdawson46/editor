@@ -1,4 +1,4 @@
-use crate::buffer::Buffer;
+use editor_core::buffer::Buffer;
 use color_eyre::eyre::Result;
 
 pub struct Window {
