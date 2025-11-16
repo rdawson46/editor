@@ -26,12 +26,6 @@ use tokio::{
     }
 };
 
-macro_rules! current_buf {
-    ($e: expr) => {
-        $e.buffers[$e.buf_ptr]
-    };
-}
-
 /*
 macro_rules! current_win {
     ($e: expr) => {
@@ -101,8 +95,18 @@ impl Editor {
         });
     }
 
+    fn current_buffer(&self) -> Option<&Buffer> {
+        self.buffers.get(self.buf_ptr)
+    }
+
+    fn current_buffer_mut(&mut self) -> Option<&mut Buffer> {
+        self.buffers.get_mut(self.buf_ptr)
+    }
+
     pub fn change_mode(&mut self, mode: Mode) {
-        current_buf!(self).change_mode(mode);
+        if let Some(buffer) = self.current_buffer_mut() {
+            buffer.change_mode(mode);
+        }
 
         match mode {
             Mode::Insert | Mode::Command => {
@@ -117,27 +121,30 @@ impl Editor {
     //
     // TODO: find way to get motion string
     pub fn mode_display(&mut self) -> Paragraph {
-        match &current_buf!(self).mode {
-            Mode::Insert => {
-                Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
-            },
-            Mode::Normal => {
-                let status = match &mut self.message {
-                    Some(value) => value.to_owned(),
-                    None => "-- Normal --".to_string(),
-                };
+        if let Some(buffer) = self.current_buffer() {
+            match &buffer.mode {
+                Mode::Insert => {
+                    Paragraph::new("-- Insert --").block(Block::default().borders(Borders::TOP))
+                }
+                Mode::Normal => {
+                    let status = match &mut self.message {
+                        Some(value) => value.to_owned(),
+                        None => "-- Normal --".to_string(),
+                    };
 
-                let status = Paragraph::new(format!("{}", status))
-                    .block(Block::default()
-                        .borders(Borders::TOP)
-                        .border_style(Style::new().blue()));
+                    let status = Paragraph::new(format!("{}", status))
+                        .block(Block::default().borders(Borders::TOP).border_style(Style::new().blue()));
 
-                status
-            },
-            Mode::Command => {
-                Paragraph::new(format!(":{}", self.command.text)).block(Block::default().borders(Borders::TOP))
-            },
-            Mode::Visual{..} => todo!("impl visual mode for ui"),
+                    status
+                }
+                Mode::Command => {
+                    Paragraph::new(format!(":{}", self.command.text))
+                        .block(Block::default().borders(Borders::TOP))
+                }
+                Mode::Visual { .. } => todo!("impl visual mode for ui"),
+            }
+        } else {
+            Paragraph::new("")
         }
     }
 
@@ -147,46 +154,61 @@ impl Editor {
      * pass to function based off buffertype
      * empty will pretty much be same as file, will need modifications for saving
      */
-    pub fn key_press(&mut self, key: KeyEvent){
-        match current_buf!(self).buffer_type {
-            BufferType::Directory => self.directory_key_press(key),
-            BufferType::File => self.file_key_press(key),
-            BufferType::Empty => {}, // FIX: add same to file, does nothing because saving not implemented
+    pub fn key_press(&mut self, key: KeyEvent) {
+        let buffer_type = self.current_buffer().map(|b| b.buffer_type);
+        if let Some(buffer_type) = buffer_type {
+            match buffer_type {
+                BufferType::Directory => self.directory_key_press(key),
+                BufferType::File => self.file_key_press(key),
+                BufferType::Empty => {} // FIX: add same to file, does nothing because saving not implemented
+            }
         }
     }
 
     // TODO: create function for handling commands so that they aren't handled in these functions
     // add permission checks to buffers when saving
-    fn directory_key_press(&mut self, key: KeyEvent){
-        match current_buf!(self).mode {
+    fn directory_key_press(&mut self, key: KeyEvent) {
+        let mode = match self.current_buffer() {
+            Some(b) => b.mode,
+            None => return,
+        };
+
+        match mode {
             Mode::Command => self.command_line_key(key),
             Mode::Normal => {
-
-                // TODO: change this impl to work with opening buffers and such
                 // will have to create functions to handle operations
                 match key.code {
                     KeyCode::Enter => {
                         // open file/directory
-                        let file_name = current_buf!(self).get_hover_file();
-                        self.send(format!("Opening {file_name}"));
-                        let _ = current_buf!(self).open(&file_name);
-                    },
+                        let file_name = self.current_buffer_mut().map(|b| b.get_hover_file());
+
+                        if let Some(file_name) = file_name {
+                            self.send(format!("Opening {file_name}"));
+                            if let Some(b) = self.current_buffer_mut() {
+                                let _ = b.open(&file_name);
+                            }
+                        }
+                    }
                     KeyCode::Char(value) => {
                         if value == 'c' && key.modifiers == KeyModifiers::CONTROL {
                             let _ = self.clear_sender.send(true);
                         } else {
                             let _ = self.motion_sender.send(value);
                         }
-                    },
+                    }
                     _ => {}
                 }
             }
-            _ => {},
+            _ => {}
         }
     }
 
-    fn file_key_press(&mut self, key: KeyEvent){
-        match current_buf!(self).mode {
+    fn file_key_press(&mut self, key: KeyEvent) {
+        let mode = match self.current_buffer() {
+            Some(b) => b.mode,
+            None => return,
+        };
+        match mode {
             Mode::Insert => self.insert_key(key),
             Mode::Command => self.command_line_key(key),
             Mode::Normal => {
@@ -201,11 +223,11 @@ impl Editor {
                         } else {
                             let _ = self.motion_sender.send(value);
                         }
-                    },
+                    }
                     _ => {}
                 }
-            },
-            Mode::Visual{..} => todo!("work on visual mode for file key press")
+            }
+            Mode::Visual { .. } => todo!("work on visual mode for file key press"),
         }
     }
 
@@ -242,18 +264,23 @@ impl Editor {
     //
     // TODO: figure out what this is for
     pub fn insert_key(&mut self, key: KeyEvent) {
-        match &current_buf!(self).buffer_type {
-            BufferType::Directory => {
-                current_buf!(self).insert_key_dir(key);
-            },
-            _ => {
-                current_buf!(self).insert_key_file(key, self.size);
+        let size = self.size;
+        if let Some(buffer) = self.current_buffer_mut() {
+            match &buffer.buffer_type {
+                BufferType::Directory => {
+                    buffer.insert_key_dir(key);
+                }
+                _ => {
+                    buffer.insert_key_file(key, size);
+                }
             }
         }
     }
 
     pub fn paste(&mut self, text: String) {
-        let _ = &current_buf!(self).paste(text);
+        if let Some(buffer) = self.current_buffer_mut() {
+            let _ = &buffer.paste(text);
+        }
     }
 
     // NOTE: word movements
@@ -263,26 +290,32 @@ impl Editor {
         // adjust for 0 indexing
         let line_idx = line_idx.checked_sub(1).unwrap_or(0);
 
-        let slice = current_buf!(self).lines.rope.get_line(line_idx);
+        let has_line = self
+            .current_buffer()
+            .and_then(|b| b.lines.rope.get_line(line_idx))
+            .is_some();
 
-        if let Some(_slice) = slice {
-            // move to that line, move cursor.y and ptr_y correctly
-            current_buf!(self).cursor.current.0 = 0;
-            current_buf!(self).cursor.current.1 = 0;
-            current_buf!(self).ptr_y = 0;
+        if has_line {
+            let size = self.size;
+            if let Some(buffer) = self.current_buffer_mut() {
+                // move to that line, move cursor.y and ptr_y correctly
+                buffer.cursor.current.0 = 0;
+                buffer.cursor.current.1 = 0;
+                buffer.ptr_y = 0;
 
-            if line_idx > self.size.1.into() {
-                // account for UI
-                current_buf!(self).cursor.current.1 = self.size.1.into();
-                current_buf!(self).cursor.current.1.checked_sub(3).unwrap_or(0);
-                current_buf!(self).ptr_y = line_idx.checked_sub(self.size.1.into()).unwrap_or(0) + 3;
-            } else {
-                current_buf!(self).cursor.current.1 = line_idx;
+                if line_idx > size.1.into() {
+                    // account for UI
+                    buffer.cursor.current.1 = size.1.into();
+                    buffer.cursor.current.1.checked_sub(3).unwrap_or(0);
+                    buffer.ptr_y = line_idx.checked_sub(size.1.into()).unwrap_or(0) + 3;
+                } else {
+                    buffer.cursor.current.1 = line_idx;
+                }
+
+                // update cursor x accordingly
+                // FIX: temp solution
+                buffer.cursor.current.0 = 0;
             }
-
-            // update cursor x accordingly
-            // FIX: temp solution
-            current_buf!(self).cursor.current.0 = 0;
         }
     }
 
@@ -383,40 +416,87 @@ impl Editor {
     }
 
     pub fn motion_func(&mut self, key: &String) {
+        let size = self.size;
         match key.as_str() {
             ":" => self.change_mode(Mode::Command),
-            "j" => current_buf!(self).move_down(self.size),
-            "k" => current_buf!(self).move_up(),
-            "h" => current_buf!(self).move_left(),
-            "l" => current_buf!(self).move_right(),
+            "j" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_down(size)
+                }
+            }
+            "k" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_up()
+                }
+            }
+            "h" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_left()
+                }
+            }
+            "l" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_right()
+                }
+            }
             "i" => self.change_mode(Mode::Insert),
             "v" => {
                 // TODO: grab current x and y coord, do I even need x and y or can i use byte
-                self.change_mode(Mode::Visual{start: 0, end: 0})
+                self.change_mode(Mode::Visual { start: 0, end: 0 })
             }
             "a" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_right();
-            },
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.change_mode(Mode::Insert);
+                    buffer.move_right();
+                }
+            }
             "O" => {
-                current_buf!(self).new_line_above(self.size);
-            },
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.new_line_above(size);
+                }
+            }
             "o" => {
-                current_buf!(self).new_line_below(self.size);
-            },
-            "w" => current_buf!(self).move_next_word(self.size),
-            "b" => current_buf!(self).move_back_word(self.size),
-            "e" => current_buf!(self).move_end_word(self.size),
-            "0" => current_buf!(self).move_begin_of_line(),
-            "$" => current_buf!(self).move_end_of_line(),
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.new_line_below(size);
+                }
+            }
+            "w" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_next_word(size)
+                }
+            }
+            "b" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_back_word(size)
+                }
+            }
+            "e" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_end_word(size)
+                }
+            }
+            "0" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_begin_of_line()
+                }
+            }
+            "$" => {
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.move_end_of_line()
+                }
+            }
             "I" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_begin_of_line();
-            },
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.change_mode(Mode::Insert);
+                    buffer.move_begin_of_line();
+                }
+            }
             "A" => {
-                current_buf!(self).change_mode(Mode::Insert);
-                current_buf!(self).move_end_of_line();
-            },
+                if let Some(buffer) = self.current_buffer_mut() {
+                    buffer.change_mode(Mode::Insert);
+                    buffer.move_end_of_line();
+                }
+            }
             _ => {}
         }
     }
@@ -504,7 +584,8 @@ impl Editor {
     // TODO: make this safer by reading permissions
     pub fn save(&mut self) -> String {
         // FIX: too much extra memory
-        return current_buf!(self).save();
+        self.current_buffer()
+            .map_or(String::from("No buffer to save"), |b| b.save())
     }
 
     // NOTE: functions for logging
@@ -520,7 +601,9 @@ impl Editor {
 
     // NOTE: mouse functions
     pub fn handle_mouse(&mut self, mouse_event: MouseEvent) {
-        current_buf!(self).mouse_handler(&mouse_event);
+        if let Some(buffer) = self.current_buffer_mut() {
+            buffer.mouse_handler(&mouse_event);
+        }
     }
 
     // NOTE: window management
@@ -536,20 +619,22 @@ impl Editor {
     // TODO: Swap interface with frame interface
     // this function might just get deleted
     pub fn set_cursor(&self, f: &mut Frame<'_>) {
-        match &current_buf!(self).mode {
-            Mode::Command => {
-                f.set_cursor(
-                    (self.command.text.len() + 1).try_into().unwrap(),
-                    f.size().height
-                );
-            },
-            _ => {
-                f.set_cursor(
-                    (current_buf!(self).cursor.current.0 + X_OFFSET).try_into().unwrap(),
-                    (current_buf!(self).cursor.current.1).try_into().unwrap()
-                );
-            }
-        };
+        if let Some(buffer) = self.current_buffer() {
+            match &buffer.mode {
+                Mode::Command => {
+                    f.set_cursor(
+                        (self.command.text.len() + 1).try_into().unwrap(),
+                        f.size().height,
+                    );
+                }
+                _ => {
+                    f.set_cursor(
+                        (buffer.cursor.current.0 + X_OFFSET).try_into().unwrap(),
+                        (buffer.cursor.current.1).try_into().unwrap(),
+                    );
+                }
+            };
+        }
     }
 
     pub async fn next_motion(&mut self) -> Result<Vec<String>> {
@@ -562,7 +647,8 @@ impl <'a> Editor {
     // TODO: create for buffer
     // move to buffer to handle more logic
     pub fn buffer_display(&self) -> (Paragraph<'a>, Paragraph<'a>) {
-        current_buf!(self).ui()
+        self.current_buffer()
+            .map_or((Paragraph::new(""), Paragraph::new("")), |b| b.ui())
     }
 }
 
