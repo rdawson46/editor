@@ -1,2 +1,11 @@
 mod motion;
-pub use motion::MotionHandler;
+mod statemachine;
+
+pub use motion::{
+    MotionHandler,
+};
+pub use statemachine::{
+    StateMachine, 
+    States
+};
+
